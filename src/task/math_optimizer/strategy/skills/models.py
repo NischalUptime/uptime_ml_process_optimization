@@ -140,7 +140,7 @@ class InferenceModel(Skill):
         """Execute the model inference, supporting parallel execution."""
         # Get input values - use current values for informative variables, dof values for operative variables
         input_values = []
-        
+        print(f"context: {context.get_dataframe()}")
         for input_id in self.inputs:
             var = context.get_variable(input_id)
             
@@ -152,6 +152,8 @@ class InferenceModel(Skill):
                 input_values.append(delta)
             else:
                 value = 0
+                #lag, offset of that var from feature_engineering config
+                #type of smootning: mean, emw, min, max
                 input_values.append(value)
 
         # Use neural network if available, otherwise return 0

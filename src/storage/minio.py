@@ -90,7 +90,7 @@ class MinIOClient:
             Exception: If config file not found or invalid
         """
         def _load_config_from_minio(version):
-            config_filename = f"configs/config-{version}.yaml"
+            config_filename = f"configs/process-optimization-strategy-config-{version}.yaml"
             logger.info("Loading config from MinIO", 
                        version=version, 
                        filename=config_filename, 

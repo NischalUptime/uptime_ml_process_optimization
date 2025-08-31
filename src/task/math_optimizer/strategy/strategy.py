@@ -151,9 +151,75 @@ class OptimizationStrategy:
         
         return list(calculated_input_vars)
 
+    def get_row_vars_from_calculated_vars(self):
+        """
+        Returns a list of variable IDs that are required as inputs
+        for calculated variables (e.g., derived from MathFunction skills).
+        """
+        calculated_vars = self.get_calculated_variable_ids()
+
+        # Map each calculated output to its input dependencies
+        calculated_output_dependencies = {}
+        for details in self.skills_config.values():
+            if details["class"] == "MathFunction":
+                for output_var in details.get("outputs", []):
+                    calculated_output_dependencies[output_var] = details.get("inputs", [])
+        
+        # Collect all inputs needed for the calculated variables
+        dependent_inputs = []
+        for var in calculated_vars:
+            if var in calculated_output_dependencies:
+                dependent_inputs.extend(calculated_output_dependencies[var])
+
+        # Deduplicate inputs while preserving order
+        seen = set()
+        required_row_vars = [var for var in dependent_inputs if not (var in seen or seen.add(var))]
+        return required_row_vars
+
+    def get_lag_offset_bounds(self):
+        """
+        Returns:
+            (min_lag, max_window_size)
+            - min_lag: minimum lag across all features
+            - max_window_size: maximum value of (lag + offset) across all features
+        """
+        lag_values = []
+        window_sizes = []
+
+        for details in self.skills_config.values():
+            if details.get("class") != "InferenceModel":
+                continue
+
+            feature_engineering = details.get("config", {}).get("feature_engineering")
+            if feature_engineering is None:
+                continue
+            
+            lag_offset_block = feature_engineering.get("lag_offset", {})
+            if not isinstance(lag_offset_block, dict):
+                continue
+            
+            for feature, params in lag_offset_block.items():
+                if not isinstance(params, dict):
+                    continue
+                lag = params.get("lag", 0)
+                offset = params.get("offset", 0)
+                lag_values.append(lag)
+                window_sizes.append(lag + offset)
+
+        if not lag_values or not window_sizes:
+            return None, None
+
+        return min(lag_values), max(window_sizes)
+
     def run_cycle(self, initial_data):
         """
         Executes a full optimization cycle.
+
+        Parameters
+        ----------
+        initial_data : dict or list
+            - dict of {var: value}  (backward-compatible single row)
+            - OR list of {"timestamp": ..., "data": {...}} dicts (time window)
         """
         # 1. Create and populate the data context for this cycle
         data_context = DataContext(self.variables_config)

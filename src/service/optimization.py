@@ -45,42 +45,76 @@ class OptimizationService:
         
     def run_single_cycle(self) -> bool:
         """
-        Run a single optimization cycle.
-        
+        Executes a single optimization cycle:
+        1. Loads strategy and configuration
+        2. Fetches required input data from DB
+        3. Validates and prepares context
+        4. Runs optimization strategy
+        5. Post-processes results and updates state
+
         Returns:
-            True if successful, False otherwise
+            bool: True if the cycle completes successfully, False otherwise.
         """
         try:
             self.cycle_count += 1
             self.logger.info(f"Starting optimization cycle #{self.cycle_count}")
             
-            # Load strategy from MinIO with configuration
+            # ---------------------------
+            # Step 1: Load optimization strategy from MinIO with configuration
+            # ---------------------------
+
             strategy = OptimizationStrategy(use_minio=True, configuration=self.configuration)
             self.logger.debug(f"Model outputs: {strategy.get_predicted_variable_ids()}")
             self.logger.info("Strategy loaded successfully from MinIO")
 
-            # Get required variables
+            # ---------------------------
+            # Step 2: Determine required variables
+            # ---------------------------
+
             operative_vars = strategy.get_operative_variable_ids()
             informative_vars = strategy.get_informative_variable_ids()
-            calculated_vars = strategy.get_calculated_variable_ids()
-            required_vars = operative_vars + informative_vars
+            calculated_row_vars = strategy.get_row_vars_from_calculated_vars()
+            required_vars = list(set(operative_vars + informative_vars + calculated_row_vars))
+            if not required_vars:
+                self.logger.error("No required variables found from strategy configuration")
+                return False
+            self.logger.info(f"Total required variables: {len(required_vars)}")
+            self.logger.debug(f"Required variable IDs: {required_vars}")
+            self.logger.info(f"  Required vars: {required_vars}")
+
+            # Get lags for data windowing
+            min_lag, max_lag = strategy.get_lag_offset_bounds()
+            self.logger.info(f"Data window: min lag = {min_lag}, max lag = {max_lag}")
+
+            # ---------------------------
+            # Step 3: Fetch latest data
+            # ---------------------------
+    
+            db = DatabaseManager(self.configuration)
 
             # Get last run timestamp
             last_timestamp = self.strategy_manager.get_last_run_timestamp()
             if last_timestamp:
                 self.logger.debug(f"Last run timestamp from config: {last_timestamp}")
 
-            # Get latest data from database
-            db = DatabaseManager(self.configuration)
-            result = db.get_latest_data(required_vars, last_timestamp)
-            last_timestamp = result['timestamp']
+            result = db.get_latest_data(required_vars, last_timestamp, min_lag, max_lag)
+            fetched_rows = result.get("rows", [])
+            if not fetched_rows:
+                self.logger.error("No rows returned from DB")
+                return False
+
+            # Use latest row for timestamp + missing variable check
+            latest_row = fetched_rows[-1]
+            last_timestamp = latest_row["timestamp"]
+            latest_data = latest_row["data"]
             self.logger.info(f"Running optimization cycle for timestamp: {last_timestamp}")
-            latest_data = result['data']
-            
             self.logger.info(f"Total variables fetched from DB: {len(latest_data)}")
             self.logger.debug(f"All fetched data: {latest_data}")
 
-            # Check for missing variables
+            # ---------------------------
+            # Step 4: Validate input data
+            # ---------------------------
+
             missing_vars = []
             for var in required_vars:
                 if latest_data.get(var) is None:
@@ -91,14 +125,23 @@ class OptimizationService:
                 self.logger.error(f"Missing variables: {missing_vars}")
                 return False
 
-            # Run optimization
-            self.logger.info("Running optimizer...")
-            final_context = strategy.run_cycle(latest_data)
+            # ---------------------------
+            # Step 5: Run optimization
+            # ---------------------------
 
+            self.logger.info("Running optimizer...")
+            final_context = strategy.run_cycle(fetched_rows)
+            # For debugging: log dataframe if present
+            df = final_context.get_dataframe()
+            if df is not None:
+                self.logger.debug(f"Final context dataframe:\n{df}")
+        
             # Post-process optimization results
             post_process_optimization_result(final_context, strategy)
 
-            # Update last run timestamp in config
+            # ---------------------------
+            # Step 6: Finalize cycle
+            # ---------------------------
             self.strategy_manager.update_last_run_timestamp(last_timestamp)
             
             self.logger.info(f"Cycle #{self.cycle_count} completed successfully")

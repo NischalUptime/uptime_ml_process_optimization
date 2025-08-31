@@ -187,23 +187,41 @@ skills:
   # --- Inference Models (Delta-based) ---
   im_predict_delta_Kiln_Drive_Current:
     class: InferenceModel
-    inputs: [delta_combined_Feed_rate, delta_Kiln_Coal_PV, delta_Calciner_temperature_PV, delta_Kiln_Inlet_NOX, delta_Kiln_Drive_Speed_PV]
+    inputs: [combined_Feed_rate, delta_Kiln_Coal_PV, Calciner_temperature_PV, delta_Kiln_Inlet_NOX, delta_Kiln_Drive_Speed_PV]
     outputs: [delta_Kiln_Drive_Current]
     config:
       model_type: ANN
       model_path: "saved_models/MA_MinMax_lag0_Kiln_Drive_Current_ann_model_fold_5.pth"
       scaler_path: "saved_scalers/Kiln_Drive_Current_minmax_scalers.pkl"
       metadata_path: "saved_metadata/Kiln_Drive_Current_metadata.json"
+      feature_engineering:
+        lag_offset:
+          combined_Feed_rate: 
+            lag: 20
+            offset: 40
+          Calciner_temperature_PV:
+            lag: 10
+            offset: 20
+        smoothing: mean #emw, min, max
   
   im_predict_Calciner_outlet_CO:
     class: InferenceModel
-    inputs: [delta_combined_Feed_rate, delta_Kiln_Coal_PV, delta_Calciner_temperature_PV, delta_PH_Fan_Speed_PV]
+    inputs: [combined_Feed_rate, delta_Kiln_Coal_PV, Calciner_temperature_PV, delta_PH_Fan_Speed_PV]
     outputs: [delta_Calciner_outlet_CO]
     config:
       model_type: ANN
       model_path: "saved_models/4_Calciner_outlet_CO_ann_model_fold_2.pth"
       scaler_path: "saved_scalers/Calciner_outlet_CO_robust_scalers.pkl"
       metadata_path: "saved_metadata/Calciner_outlet_CO_metadata.json"
+      feature_engineering:
+        lag_offset:
+          combined_Feed_rate: 
+            lag: 10
+            offset: 60
+          Calciner_temperature_PV:
+            lag: 23
+            offset: 20
+        smoothing: mean #emw, min, max
   
   im_predict_Clinker_temperature:
     class: InferenceModel
