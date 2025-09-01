@@ -5,13 +5,13 @@ class DataContext:
     A transient, in-memory container holding the state of all Variable
     objects for a single execution cycle.
     """
-    def __init__(self, variables_config):
+    def __init__(self, variables_config, weights_config=None):
         self._variables = {
             var_id: Variable(var_id, config)
             for var_id, config in variables_config.items()
         }
         self._df = None  # DataFrame to hold time series data if needed
-
+        self.weights = weights_config or {}
     def get_variable(self, var_id):
         if var_id not in self._variables:
             raise KeyError(f"Variable '{var_id}' not found in DataContext.")

@@ -178,7 +178,7 @@ class MinIOClient:
                 import io
                 import torch
                 model_bytes = io.BytesIO(response.data)
-                model_data = torch.load(model_bytes, map_location='cpu')
+                model_data = torch.load(model_bytes, map_location='cpu', weights_only=False)
                 response.close()
                 response.release_conn()
                 

@@ -68,7 +68,7 @@ class InferenceModel(Skill):
             # Load model from MinIO
             if self.model_path:
                 # Remove ../ prefix and add models prefix since we're loading from MinIO
-                minio_model_path = f"models/{self.model_path.replace('../', '')}"
+                minio_model_path = f"{self.model_path.replace('../', '')}"
                 try:
                     # Load model directly from MinIO (now returns model object, not file path)
                     model_state_dict = self.minio_client.get_pytorch_model(minio_model_path)
@@ -99,7 +99,7 @@ class InferenceModel(Skill):
             # Load scaler from MinIO
             if self.scaler_path:
                 # Remove ../ prefix and add models prefix since we're loading from MinIO
-                minio_scaler_path = f"models/{self.scaler_path.replace('../', '')}"
+                minio_scaler_path = f"{self.scaler_path.replace('../', '')}"
                 try:
                     self.scaler = self.minio_client.get_pickle_scaler(minio_scaler_path)
                     self.logger.info(f"Loaded scaler from MinIO: {minio_scaler_path}")
@@ -121,7 +121,7 @@ class InferenceModel(Skill):
             # Load metadata from MinIO (optional)
             if self.metadata_path:
                 # Remove ../ prefix and add models prefix since we're loading from MinIO
-                minio_metadata_path = f"models/{self.metadata_path.replace('../', '')}"
+                minio_metadata_path = f"{self.metadata_path.replace('../', '')}"
                 self.metadata = self.minio_client.get_json_metadata(minio_metadata_path)
                 self.logger.debug(f"Loaded metadata from MinIO: {minio_metadata_path}")
                 
