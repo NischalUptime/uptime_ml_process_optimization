@@ -175,11 +175,12 @@ class InferenceModel(Skill):
                     else:
                         if smoothing_method == "ewm":
                             smoothed_series = series_window.ewm(alpha=smoothing_alpha, adjust=False).mean()
-                            print(f"EWM Series ({var.var_id}):\n{smoothed_series}")
+                            self.logger.debug(f"EWM Series for ({var.var_id})")
+                            self.logger.debug(smoothed_series)
                             value = smoothed_series.iloc[-1]
                         elif smoothing_method == "mean":
                             mean_value = series_window.mean()
-                            print(f"Mean ({var.var_id}): {mean_value}")
+                            self.logger.debug(f"Mean for ({var.var_id}): {mean_value}")
                             value = mean_value
             input_values.append(value)
 
