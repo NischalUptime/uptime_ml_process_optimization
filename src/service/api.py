@@ -16,11 +16,6 @@ from typing import Dict, Any, Optional
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
-# Add src to path for absolute imports
-src_path = os.path.dirname(os.path.dirname(__file__))
-if src_path not in sys.path:
-    sys.path.insert(0, src_path)
-
 from task.math_optimizer.strategy.strategy import OptimizationStrategy
 from storage.in_memory_cache import get_cache
 
