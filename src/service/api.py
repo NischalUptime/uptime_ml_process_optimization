@@ -7,8 +7,6 @@ import threading
 import tempfile
 import yaml
 import os
-import sys
-import logging
 from typing import Dict
 import traceback
 from datetime import datetime
@@ -42,11 +40,6 @@ class APIService:
         # Create Flask app
         self.app = Flask(__name__)
         CORS(self.app)  # Enable CORS for all routes
-        
-        # Configure Flask logging
-        if not debug:
-            log = logging.getLogger('werkzeug')
-            log.setLevel(logging.WARNING)
         
         # Register routes
         self._register_routes()

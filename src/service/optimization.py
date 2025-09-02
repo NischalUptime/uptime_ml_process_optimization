@@ -3,16 +3,7 @@ Optimization Service - Handles continuous optimization cycles.
 """
 import threading
 import structlog
-import sys
-import os
-from datetime import datetime
-from typing import Optional, Dict
-
-# Add src to path for absolute imports
-src_path = os.path.dirname(os.path.dirname(__file__))
-if src_path not in sys.path:
-    sys.path.insert(0, src_path)
-
+from typing import Dict
 from task.math_optimizer.strategy.strategy import OptimizationStrategy
 from storage import DatabaseManager
 from storage.in_memory_cache import get_cache
