@@ -1,8 +1,6 @@
 """
 Optimization Service - Handles continuous optimization cycles.
 """
-
-import time
 import threading
 import structlog
 import sys
@@ -18,10 +16,7 @@ if src_path not in sys.path:
 from task.math_optimizer.strategy.strategy import OptimizationStrategy
 from storage import DatabaseManager
 from storage.in_memory_cache import get_cache
-# Import via alias to handle hyphenated directory name
-import importlib
-strategy_manager_module = importlib.import_module('task.math_optimizer.strategy-manager.strategy_manager')
-StrategyManager = strategy_manager_module.StrategyManager
+from task.math_optimizer.strategy_manager.strategy_manager import StrategyManager
 from task.math_optimizer.strategy import post_process_optimization_result
 
 
