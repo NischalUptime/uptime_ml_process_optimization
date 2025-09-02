@@ -160,7 +160,6 @@ class OptimizationStrategy:
                         calculated_var_to_raw_vars_map[output_var] = details.get("inputs", [])
 
         # Collect all inputs needed for the calculated variables
-        dependent_inputs = []
         required_raw_vars = []
         seen = set()
         for var in calculated_vars:
