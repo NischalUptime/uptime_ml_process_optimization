@@ -10,6 +10,7 @@ class DataContext:
             var_id: Variable(var_id, config)
             for var_id, config in variables_config.items()
         }
+        self._df = None  # DataFrame to hold time series data if needed
 
     def get_variable(self, var_id):
         if var_id not in self._variables:
@@ -19,9 +20,36 @@ class DataContext:
     def has_variable(self, var_id):
         return var_id in self._variables
 
-    def populate_initial_data(self, data):
-        """Populates the context with live data at the start of a cycle."""
-        for var_id, value in data.items():
+    def populate_initial_data(self, records):
+        """
+        Populates the context with live data at the start of a cycle.
+
+        Args:
+        records (list | dict):
+            - A list of {"timestamp": ..., "data": {...}} dictionaries
+            - OR a single {"var1": ..., "var2": ...} dict (backward compatibility)
+        """
+        import pandas as pd
+
+        if not records:
+            raise ValueError("No data provided to populate_initial_data")
+
+        # Normalize input into a list of {"timestamp": ..., "data": {...}}
+        if isinstance(records, dict) and "data" not in records:
+            records = [{"timestamp": None, "data": records}]
+        elif isinstance(records, dict):
+            records = [records]
+
+        # Store full dataset in a DataFrame
+        self._df = pd.DataFrame(
+            [{"timestamp": row.get("timestamp"), **row.get("data", {})} for row in records]
+        )
+
+        # Use the last row’s data for initializing variables
+        last_row = records[-1].get("data", {})
+
+        # 1. Assign provided values to known variables
+        for var_id, value in last_row.items():
             if self.has_variable(var_id):
                 self.get_variable(var_id).set_initial_value(value)
         
@@ -41,3 +69,11 @@ class DataContext:
 
     def get_all_variables(self):
         return self._variables
+
+    def set_dataframe(self, df):
+        """Set the DataFrame for the context."""
+        self._df = df
+
+    def get_dataframe(self):
+        """Return the full dataframe stored in context."""
+        return self._df

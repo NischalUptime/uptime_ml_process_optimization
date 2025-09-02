@@ -1,6 +1,6 @@
 import psycopg2
 import structlog
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 
 logger = structlog.get_logger(__name__)
@@ -65,59 +65,101 @@ class DatabaseManager:
         except Exception as e:
             logger.warning("Error during database disconnect", error=str(e))
 
-    def get_latest_data(self, required_vars: List[str], last_timestamp: Optional[datetime] = None) -> Dict:
-        """Fetch latest data from database"""
-        logger.info("Fetching latest data from database", 
-                   required_vars_count=len(required_vars),
-                   has_last_timestamp=last_timestamp is not None)
-        
+    def get_latest_data(self, required_vars: List[str], last_timestamp: Optional[datetime] = None, min_lag: Optional[int] = None, max_lag: Optional[int] = None) -> Dict[str, List[Dict]]:
+        """
+            Fetch process data from the database using one of three strategies:
+            1. Lag window (min_lag and max_lag provided)
+            2. Rows after a given last_timestamp
+            3. Latest single row (default)
+
+            Returns:
+            dict: {"rows": [{"timestamp": ..., "data": {...}}, ...]}
+        """
+        logger.info(
+            "Fetching data from database",
+            required_vars_count=len(required_vars),
+            last_timestamp=last_timestamp,
+            min_lag=min_lag,
+            max_lag=max_lag,
+        )
+
         try:
             self.connect()
             # Format column names with proper quotes
             columns = ', '.join(f'"{var}"' for var in required_vars)
+
+
+            # -------------------
+            # Case 1: lag window
+            # -------------------
+            if min_lag is not None and max_lag is not None:
+                now = datetime.now()
+                start_time = now - timedelta(minutes=max_lag)
+                end_time = now - timedelta(minutes=min_lag)
+
+                query = f"""
+                SELECT "timestamp", {columns}
+                FROM process_data
+                WHERE "timestamp" BETWEEN %s AND %s
+                ORDER BY "timestamp" ASC;
+                """
+                params = (start_time, end_time)
+                logger.debug("Executing lag-window query", 
+                            query=query.strip(),
+                            start_time=start_time,
+                            end_time=end_time)
             
-            # Build query based on whether we have a last timestamp
-            if last_timestamp:
-                query = """
-                SELECT "timestamp", {}
+            # -------------------
+            # Case 2: last_timestamp present
+            # -------------------
+            elif last_timestamp:
+                query = f"""
+                SELECT "timestamp", {columns}
                 FROM process_data
                 WHERE "timestamp" > %s
                 ORDER BY "timestamp" DESC
                 LIMIT 1;
-                """.format(columns)
-                logger.debug("Executing timestamped query", 
-                           query=query.strip(), 
+                """
+                params = (last_timestamp,)
+                logger.debug("Executing timestamped query",
+                           query=query.strip(),
                            last_timestamp=last_timestamp)
-                self.cursor.execute(query, (last_timestamp,))
+
+            # -------------------
+            # Case 3: latest row
+            # -------------------
             else:
                 # If no timestamp, get the latest row
-                query = """
-                SELECT "timestamp", {}
+                query = f"""
+                SELECT "timestamp", {columns}
                 FROM process_data
                 ORDER BY "timestamp" DESC
                 LIMIT 1;
-                """.format(columns)
+                """
+                params = ()
                 logger.debug("Executing latest data query", query=query.strip())
-                self.cursor.execute(query)
-
+            
+            self.cursor.execute(query, params)
             # Get column names and fetch data
             column_names = [desc[0] for desc in self.cursor.description]
-            row = self.cursor.fetchone()
-            
-            if not row:
+            raw_rows = self.cursor.fetchall()
+
+            if not raw_rows:
                 logger.warning("No data found in database")
                 raise Exception("No data found in database")
                 
-            # Convert to dictionary
-            data = dict(zip(column_names, row))
-            timestamp = data.pop('timestamp')  # Remove and get timestamp
-            
-            logger.info("Successfully fetched data from database", 
-                       timestamp=timestamp,
-                       variables_count=len(data),
-                       variables=list(data.keys()))
-            
-            return {'timestamp': timestamp, 'data': data}
+            records = []
+
+            for row in raw_rows:
+                row_dict = dict(zip(column_names, row))
+                timestamp = row_dict.pop('timestamp')  # Remove and get timestamp
+                records.append({'timestamp': timestamp, 'data': row_dict})
+
+            logger.info("Successfully fetched data from database",
+                    rows_count=len(records),
+                    variables=list(records[0]["data"].keys()) if records else [])
+
+            return { "rows": records }
 
         except psycopg2.Error as e:
             logger.error("PostgreSQL database error", 
