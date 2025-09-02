@@ -12,6 +12,8 @@ class DataContext:
         }
         self._df = None  # DataFrame to hold time series data if needed
         self.weights = weights_config or {}
+        self._dynamic_bounds = {}
+        self._solver_constraints = []
     def get_variable(self, var_id):
         if var_id not in self._variables:
             raise KeyError(f"Variable '{var_id}' not found in DataContext.")
@@ -77,3 +79,24 @@ class DataContext:
     def get_dataframe(self):
         """Return the full dataframe stored in context."""
         return self._df
+
+    def set_dynamic_bounds(self, bounds_map):
+        """
+        Set dynamic bounds for variables.
+        bounds_map format: { var_id: { 'min': float, 'max': float }, ... }
+        """
+        self._dynamic_bounds = bounds_map or {}
+
+    def get_dynamic_bounds(self):
+        """Get dynamic bounds map if set, else empty dict."""
+        return self._dynamic_bounds
+
+    def set_solver_constraints(self, constraints):
+        """
+        Store pre-built solver constraints (e.g., SciPy NonlinearConstraint objects).
+        """
+        self._solver_constraints = constraints or []
+
+    def get_solver_constraints(self):
+        """Retrieve solver constraints list if any."""
+        return self._solver_constraints

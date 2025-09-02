@@ -1,8 +1,5 @@
 from .base import Skill
 from scipy.optimize import minimize
-from scipy.optimize import NonlinearConstraint as SciPyNonlinearConstraint
-from scipy.optimize import differential_evolution, shgo
-import numpy as np
 
 class OptimizationSkill(Skill):
     """
@@ -10,7 +7,6 @@ class OptimizationSkill(Skill):
     """
     def __init__(self, name, config):
         super().__init__(name, config)
-        self.hard_constraints_cfg = config.get('hard_constraints', [])
         self.cost_skill_name = config['config']['cost_skill_name']
         self.cost_feature_name = config['config']['cost_feature_name']
         self.algorithm = config['config'].get('algorithm', 'SLSQP')
@@ -55,6 +51,11 @@ class OptimizationSkill(Skill):
         x0 = []
         bounds = []
         eps_values = []
+        dynamic_bounds_map = {}
+        try:
+            dynamic_bounds_map = context.get_dynamic_bounds()
+        except Exception:
+            dynamic_bounds_map = {}
         for var_id in optimizable_inputs:
             var = context.get_variable(var_id)
             # Ensure we have a valid current_value
@@ -73,67 +74,24 @@ class OptimizationSkill(Skill):
             print(f"Variable {var_id}: current_value={var.current_value}, threshold={threshold}, min_hard_limit={var.min_hard_limit}, max_hard_limit={var.max_hard_limit}")
             
             x0.append(var.current_value)
-            min_bound = max(var.min_hard_limit, var.current_value - threshold)
-            max_bound = min(var.max_hard_limit, var.current_value + threshold)
-            
-            # Validate bounds
-            if min_bound > max_bound:
-                print(f"ERROR: Invalid bounds for {var_id}: min_bound={min_bound} > max_bound={max_bound}")
-                print(f"  current_value={var.current_value}, threshold={threshold}")
-                print(f"  min_hard_limit={var.min_hard_limit}, max_hard_limit={var.max_hard_limit}")
-                # Fix bounds by ensuring they're valid
-                min_bound = var.min_hard_limit
-                max_bound = var.max_hard_limit
-                if min_bound >= max_bound:
-                    # If hard limits are also invalid, use reasonable defaults
-                    min_bound = var.current_value - threshold
-                    max_bound = var.current_value + threshold
-                    print(f"  Fixed bounds to: ({min_bound}, {max_bound})")
+            # Bounds must be provided by BoundsBuilderSkill; do not modify here
+            dyn = dynamic_bounds_map.get(var_id) or {}
+            if 'min' not in dyn or 'max' not in dyn:
+                raise RuntimeError(f"Missing dynamic bounds for '{var_id}'. Ensure BoundsBuilderSkill provides bounds for all optimizer inputs.")
+            min_bound = float(dyn['min'])
+            max_bound = float(dyn['max'])
             
             bounds.append((min_bound, max_bound))
             eps_values.append(0.01 * var.current_value)
 
         print("bounds: ", bounds)
         
-        # Prepare constraints for hard-constraint mode
+        # Solver constraints built by the skill
         constraints_to_pass = []
-        # Use the extracted hard constraints instead of accessing config again
-        if self.hard_constraints_cfg:
-            print("hard_constraints_cfg: ", self.hard_constraints_cfg)
-            
-            # Build NonlinearConstraint objects for better constraint handling
-            def make_constraint_fun(op_min, op_max, pred_var_id):
-                def fun(x_vals):
-                    # Update context with current x values
-                    for var_id, value in zip(optimizable_inputs, x_vals):
-                        context.get_variable(var_id).dof_value = value
-                    # Run cost skill to get predictions
-                    cost_skill.execute(context)
-                    # Get predicted value
-                    pred_var = context.get_variable(pred_var_id)
-                    v = pred_var.dof_value if pred_var and pred_var.dof_value is not None else 0.0
-                    # Return both min and max constraints as array
-                    return np.array([
-                        v - op_min,  # >= 0
-                        op_max - v   # >= 0
-                    ])
-                return fun
-            
-            constraints_list = []
-            for c in self.hard_constraints_cfg:
-                pred_var_id = c.get('predicted_var')
-                op_min = c.get('op_min')
-                op_max = c.get('op_max')
-                if pred_var_id and op_min is not None and op_max is not None:
-                    print(f"Adding constraint for {pred_var_id}: {op_min} <= value <= {op_max}")
-                    constraints_list.append(
-                        SciPyNonlinearConstraint(
-                            fun=make_constraint_fun(op_min, op_max, pred_var_id),
-                            lb=np.array([0.0, 0.0]),  # Both constraints must be >= 0
-                            ub=np.array([np.inf, np.inf])
-                        )
-                    )
-            constraints_to_pass = constraints_list
+        try:
+            constraints_to_pass = context.get_solver_constraints() or []
+        except Exception:
+            constraints_to_pass = []
 
         # Run optimization based on method
         method = (self.algorithm or '').strip()
@@ -201,14 +159,8 @@ class OptimizationSkill(Skill):
                 print(f"Method {method} failed with constraints: {e}")
                 print("Falling back to bounds-only optimization...")
                 # Fallback: run without constraints, then refine with constraints
-                prelim = minimize(fun=objective, x0=x0, method=method, bounds=bounds, 
+                result = minimize(fun=objective, x0=x0, method=method, bounds=bounds, 
                                options={'maxiter': 1000, 'disp': False})
-                x_init = prelim.x if prelim.success else x0
-                # Refine with constraints using trust-constr
-                result = minimize(fun=objective, x0=x_init, method='trust-constr', 
-                               bounds=bounds, constraints=constraints_to_pass,
-                               options={'maxiter': 1000, 'disp': False})
-
         # Store the optimal values
         if result.success:
             try:
