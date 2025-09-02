@@ -70,6 +70,10 @@ class DataContext:
     def get_all_variables(self):
         return self._variables
 
+    def set_dataframe(self, df):
+        """Set the DataFrame for the context."""
+        self._df = df
+
     def get_dataframe(self):
         """Return the full dataframe stored in context."""
         return self._df

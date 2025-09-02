@@ -6,7 +6,15 @@ class MathFunction(Skill):
     def __init__(self, name, config):
         super().__init__(name, config)
         self.formula = config['config']['formula']
+        self.df_formula = config['config']['dataframe_formula'] if 'dataframe_formula' in config['config'] else None
         self.aeval = asteval.Interpreter()
+
+    def resolve_dataframe_formula(self, skill, data_context):
+        df = data_context.get_dataframe()
+        method = self.df_formula.get('method')
+        axis = self.df_formula.get("axis")
+        df[self.outputs[0]] = getattr(df[self.inputs], method)(axis=axis)
+        data_context.set_dataframe(df)
 
     def execute(self, data_context) -> None:
         # Populate the symbol table for the expression evaluator

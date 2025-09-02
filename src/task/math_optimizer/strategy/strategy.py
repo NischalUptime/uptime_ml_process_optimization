@@ -183,13 +183,12 @@ class OptimizationStrategy:
             - min_lag: minimum lag across all features
             - max_window_size: maximum value of (lag + offset) across all features
         """
-        lag_values = []
-        window_sizes = []
+        min_lag = None
+        max_window = None
 
         for details in self.skills_config.values():
             if details.get("class") != "InferenceModel":
                 continue
-
             feature_engineering = details.get("config", {}).get("feature_engineering")
             if feature_engineering is None:
                 continue
@@ -203,13 +202,16 @@ class OptimizationStrategy:
                     continue
                 lag = params.get("lag", 0)
                 offset = params.get("offset", 0)
-                lag_values.append(lag)
-                window_sizes.append(lag + offset)
+                window = lag + offset
+                if min_lag is None or lag < min_lag:
+                    min_lag = lag
+                if max_window is None or window > max_window:
+                    max_window = window
 
-        if not lag_values or not window_sizes:
+        if min_lag is None or max_window is None:
             return None, None
 
-        return min(lag_values), max(window_sizes)
+        return min_lag, max_window
 
     def run_cycle(self, initial_data):
         """
@@ -231,6 +233,11 @@ class OptimizationStrategy:
             # print(f"Executing task: {task_name}")
             
             for skill_name in task['skill_sequence']:
+                if task_name == "PreCalculateVariables":
+                    config = self.skills_config.get(skill_name)
+                    if config and config['class'] == 'MathFunction':
+                        math_function = MathFunction(skill_name, config)
+                        math_function.resolve_dataframe_formula(skill_name, data_context)
                 skill = self._skills.get(skill_name)
                 if not skill:
                     raise ValueError(f"Skill '{skill_name}' in task '{task_name}' not found.")

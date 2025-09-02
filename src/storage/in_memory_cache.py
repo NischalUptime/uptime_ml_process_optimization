@@ -26,7 +26,7 @@ class InMemoryCache:
         self.PREFIX_MODEL = "strategy:model:"
         self.PREFIX_SCALER = "strategy:scaler:"
         self.PREFIX_VERSION = "strategy:version:"
-        
+        self.PREFIX_LAG_OFFSET_BOUNDS = "strategy:lag_offset_bounds:"
         self.logger.info("Initialized in-memory cache")
     
     def get_last_run_timestamp_with_cache(self, loader_func: Callable[[], Optional[datetime]]) -> Optional[datetime]:
@@ -443,6 +443,32 @@ class InMemoryCache:
                 'cache_efficiency': 0.0
             }
 
+    def set_lag_offset_bounds(self, bounds: Dict[str, Any]) -> None:
+        """
+        Set the lag offset bounds for the cache.
+
+        Args:
+            bounds: A dictionary containing the lag offset bounds.
+        """
+        try:
+            with self._lock:
+                self._cache[self.PREFIX_LAG_OFFSET_BOUNDS] = bounds
+        except Exception as e:
+            self.logger.error(f"Failed to set lag offset bounds: {e}")
+
+    def get_lag_offset_bounds(self) -> Optional[Dict[str, Any]]:
+        """
+        Get the lag offset bounds from the cache.
+
+        Returns:
+            A dictionary containing the lag offset bounds, or None if not set.
+        """
+        try:
+            with self._lock:
+                return self._cache.get(self.PREFIX_LAG_OFFSET_BOUNDS)
+        except Exception as e:
+            self.logger.error(f"Failed to get lag offset bounds: {e}")
+            return None
 
 # Global cache instance
 _cache: Optional[InMemoryCache] = None

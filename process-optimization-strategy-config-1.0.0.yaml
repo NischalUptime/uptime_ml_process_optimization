@@ -71,6 +71,9 @@ skills:
     outputs: [Cooler_Fan_3_4_5_6_Flow]
     config:
       formula: "Cooler_Fan_3_Flow + Cooler_Fan_4_Flow + Cooler_Fan_5_Flow + Cooler_Fan_6_Flow"
+      dataframe_formula:
+        method: sum
+        axis: 1
 
   mf_sum_cooler_flows_2:
     class: MathFunction
@@ -78,6 +81,9 @@ skills:
     outputs: [Cooler_Fan_7_8_9_Flow]
     config:
       formula: "Cooler_Fan_7_Flow + Cooler_Fan_8_Flow + Cooler_Fan_9_Flow"
+      dataframe_formula:
+        method: sum
+        axis: 1
 
   mf_calc_combined_feed_rate:
     class: MathFunction
@@ -85,6 +91,9 @@ skills:
     outputs: [combined_Feed_rate]
     config:
       formula: "Kiln_Feed_SFF_1_Feed_rate + Kiln_Feed_SFF_2_Feed_rate"
+      dataframe_formula:
+        method: sum
+        axis: 1
 
   # --- Delta Calculation Skills (Inputs for Models) ---
   mf_calc_delta_feed:

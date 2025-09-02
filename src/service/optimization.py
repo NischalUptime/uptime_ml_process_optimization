@@ -83,7 +83,15 @@ class OptimizationService:
             self.logger.info(f"  Required vars: {required_vars}")
 
             # Get lags for data windowing
-            min_lag, max_lag = strategy.get_lag_offset_bounds()
+            lag_bounds = self.cache.get_lag_offset_bounds()
+            if lag_bounds:
+                self.logger.info(f"Using cached lag bounds: {lag_bounds}")
+                min_lag = lag_bounds.get("min_lag", 0)
+                max_lag = lag_bounds.get("max_lag", 0)
+            else:
+                self.logger.info("No cached lag bounds found, using strategy defaults.")
+                min_lag, max_lag = strategy.get_lag_offset_bounds()
+                self.cache.set_lag_offset_bounds({"min_lag": min_lag, "max_lag": max_lag})
             self.logger.info(f"Data window: min lag = {min_lag}, max lag = {max_lag}")
 
             # ---------------------------
