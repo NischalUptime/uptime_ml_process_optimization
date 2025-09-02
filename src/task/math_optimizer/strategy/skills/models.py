@@ -48,7 +48,9 @@ class InferenceModel(Skill):
         self.model_path = config['config'].get('model_path', None)
         self.scaler_path = config['config'].get('scaler_path', None)
         self.metadata_path = config['config'].get('metadata_path', None)
-        self.smoothing = config['config'].get('smoothing', 'mean')
+        self.feature_engineering = config['config'].get('feature_engineering', {})
+        self.lag_offset = self.feature_engineering.get('lag_offset', {})
+        self.smoothing = self.feature_engineering.get('smoothing', {})
         self.configuration = configuration
         
         # Initialize MinIO client and logger with configuration
@@ -140,21 +142,48 @@ class InferenceModel(Skill):
         """Execute the model inference, supporting parallel execution."""
         # Get input values - use current values for informative variables, dof values for operative variables
         input_values = []
-        print(f"context: {context.get_dataframe()}")
         for input_id in self.inputs:
             var = context.get_variable(input_id)
-            
+            value = 0
             if var.var_type == 'Delta':
                 # This is an operative variable, calculate delta
-                dof_val = var.dof_value
-                current_val = var.current_value
-                delta = dof_val - current_val
-                input_values.append(delta)
-            else:
-                value = 0
-                #lag, offset of that var from feature_engineering config
-                #type of smootning: mean, emw, min, max
-                input_values.append(value)
+                value = var.dof_value - var.current_value
+            elif var.var_type in ['Operative', 'Calculated']:
+                variation = self.lag_offset.get(var.var_id, {}).get("variation")
+                if variation == 'Increment':
+                    value = var.dof_value - var.current_value
+                elif variation == 'Absolute':
+                    value = var.dof_value
+            elif var.var_type == 'Informative':
+                variation = self.lag_offset.get(var.var_id, {}).get('variation')
+                if variation == 'Increment':
+                    value = var.dof_value - var.current_value
+                elif variation == 'Absolute':
+                    # Get smoothing method
+                    smoothing_method = self.smoothing.get("method", "mean")
+                    smoothing_alpha = self.smoothing.get("alpha", 0.7)
+                    
+                    # Get lag/offset info for this variable
+                    lag_offset_cfg = self.lag_offset.get(var.var_id, {})
+                    lag = lag_offset_cfg.get("lag", 0)
+                    offset = lag_offset_cfg.get("offset", 0)
+                    
+                    # Get the dataframe slice
+                    df = context.get_dataframe()
+                    series_window = df[var.var_id].iloc[-(lag + offset): -lag]
+                    
+                    if series_window.empty:
+                        value = 0
+                    else:
+                        if smoothing_method == "ewm":
+                            smoothed_series = series_window.ewm(alpha=smoothing_alpha, adjust=False).mean()
+                            print(f"EWM Series ({var.var_id}):\n{smoothed_series}")
+                            value = smoothed_series.iloc[-1]
+                        elif smoothing_method == "mean":
+                            mean_value = series_window.mean()
+                            print(f"Mean ({var.var_id}): {mean_value}")
+                            value = mean_value
+            input_values.append(value)
 
         # Use neural network if available, otherwise return 0
         if self.model is not None and self.scaler is not None:

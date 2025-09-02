@@ -196,7 +196,7 @@ skills:
   # --- Inference Models (Delta-based) ---
   im_predict_delta_Kiln_Drive_Current:
     class: InferenceModel
-    inputs: [combined_Feed_rate, delta_Kiln_Coal_PV, Calciner_temperature_PV, delta_Kiln_Inlet_NOX, delta_Kiln_Drive_Speed_PV]
+    inputs: [combined_Feed_rate, Clinker_temperature, Calciner_temperature_PV, delta_Kiln_Inlet_NOX, delta_Kiln_Drive_Speed_PV]
     outputs: [delta_Kiln_Drive_Current]
     config:
       model_type: ANN
@@ -208,14 +208,22 @@ skills:
           combined_Feed_rate: 
             lag: 20
             offset: 40
+            variation: Absolute
           Calciner_temperature_PV:
             lag: 10
             offset: 20
-        smoothing: mean #emw, min, max
-  
+            variation: Increment
+          Clinker_temperature:
+            lag: 5
+            offset: 10
+            variation: Absolute
+        smoothing: 
+          method: mean #emw, min, max
+          alpha: 0.1
+
   im_predict_Calciner_outlet_CO:
     class: InferenceModel
-    inputs: [combined_Feed_rate, delta_Kiln_Coal_PV, Calciner_temperature_PV, delta_PH_Fan_Speed_PV]
+    inputs: [combined_Feed_rate, Clinker_temperature, Calciner_temperature_PV, delta_PH_Fan_Speed_PV]
     outputs: [delta_Calciner_outlet_CO]
     config:
       model_type: ANN
@@ -227,11 +235,19 @@ skills:
           combined_Feed_rate: 
             lag: 10
             offset: 60
+            variation: Absolute
           Calciner_temperature_PV:
             lag: 23
             offset: 20
-        smoothing: mean #emw, min, max
-  
+            variation: Increment
+          Clinker_temperature:
+            lag: 5
+            offset: 10
+            variation: Absolute
+        smoothing:
+          method: ewm #ewm, min, max
+          alpha: 0.1
+
   im_predict_Clinker_temperature:
     class: InferenceModel
     inputs: [delta_Kiln_Drive_Current, delta_Under_grate_Average_Pressure, delta_Cooler_Fan_2_Flow, delta_Cooler_Fan_3_4_5_6_Flow, delta_Cooler_Fan_7_8_9_Flow, delta_Cooler_Fan_A_Flow]
