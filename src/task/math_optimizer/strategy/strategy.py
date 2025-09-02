@@ -144,7 +144,7 @@ class OptimizationStrategy:
         
         return list(calculated_input_vars)
 
-    def get_row_vars_from_calculated_vars(self):
+    def get_raw_vars_from_calculated_vars(self):
         """
         Returns a list of variable IDs that are required as inputs
         for calculated variables (e.g., derived from MathFunction skills).
@@ -152,22 +152,24 @@ class OptimizationStrategy:
         calculated_vars = self.get_calculated_variable_ids()
 
         # Map each calculated output to its input dependencies
-        calculated_output_dependencies = {}
+        calculated_var_to_raw_vars_map = {}
         for details in self.skills_config.values():
             if details["class"] == "MathFunction":
                 for output_var in details.get("outputs", []):
-                    calculated_output_dependencies[output_var] = details.get("inputs", [])
-        
+                    if output_var in calculated_vars:
+                        calculated_var_to_raw_vars_map[output_var] = details.get("inputs", [])
+
         # Collect all inputs needed for the calculated variables
         dependent_inputs = []
-        for var in calculated_vars:
-            if var in calculated_output_dependencies:
-                dependent_inputs.extend(calculated_output_dependencies[var])
-
-        # Deduplicate inputs while preserving order
+        required_raw_vars = []
         seen = set()
-        required_row_vars = [var for var in dependent_inputs if not (var in seen or seen.add(var))]
-        return required_row_vars
+        for var in calculated_vars:
+            if var in calculated_var_to_raw_vars_map:
+                for raw_var in calculated_var_to_raw_vars_map[var]:
+                    if raw_var not in seen:
+                        seen.add(raw_var)
+                        required_raw_vars.append(raw_var)
+        return required_raw_vars
 
     def get_lag_offset_bounds(self):
         """

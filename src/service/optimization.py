@@ -59,7 +59,7 @@ class OptimizationService:
 
             operative_vars = strategy.get_operative_variable_ids()
             informative_vars = strategy.get_informative_variable_ids()
-            calculated_row_vars = strategy.get_row_vars_from_calculated_vars()
+            calculated_row_vars = strategy.get_raw_vars_from_calculated_vars()
             required_vars = list(set(operative_vars + informative_vars + calculated_row_vars))
             if not required_vars:
                 self.logger.error("No required variables found from strategy configuration")
