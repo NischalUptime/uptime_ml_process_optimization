@@ -7,19 +7,12 @@ import threading
 import tempfile
 import yaml
 import os
-import sys
-import logging
 from typing import Dict
 import traceback
 from datetime import datetime
 from typing import Dict, Any, Optional
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-
-# Add src to path for absolute imports
-src_path = os.path.dirname(os.path.dirname(__file__))
-if src_path not in sys.path:
-    sys.path.insert(0, src_path)
 
 from task.math_optimizer.strategy.strategy import OptimizationStrategy
 from storage.in_memory_cache import get_cache
@@ -48,11 +41,6 @@ class APIService:
         self.app = Flask(__name__)
         CORS(self.app)  # Enable CORS for all routes
         
-        # Configure Flask logging
-        if not debug:
-            log = logging.getLogger('werkzeug')
-            log.setLevel(logging.WARNING)
-        
         # Register routes
         self._register_routes()
         
@@ -61,11 +49,11 @@ class APIService:
         
     def _register_routes(self):
         """Register all API routes."""
-        self.app.add_url_rule('/health', 'health_check', self._health_check, methods=['GET'])
-        self.app.add_url_rule('/optimize', 'run_optimization', self._run_optimization, methods=['POST'])
-        self.app.add_url_rule('/cache/stats', 'get_cache_stats', self._get_cache_stats, methods=['GET'])
-        self.app.add_url_rule('/cache/clear', 'clear_cache', self._clear_cache, methods=['POST'])
-        
+        self.app.add_url_rule('/process/health', 'health_check', self._health_check, methods=['GET'])
+        self.app.add_url_rule('/process/optimize', 'run_optimization', self._run_optimization, methods=['POST'])
+        self.app.add_url_rule('/process/cache/stats', 'get_cache_stats', self._get_cache_stats, methods=['GET'])
+        self.app.add_url_rule('/process/cache/clear', 'clear_cache', self._clear_cache, methods=['POST'])
+        self.app.add_url_rule('/process/strategy-version-update', 'update_strategy_version', self._update_strategy_version, methods=['PUT'])
         # Error handlers
         self.app.errorhandler(404)(self._not_found)
         self.app.errorhandler(500)(self._internal_error)
@@ -400,7 +388,6 @@ class APIService:
         try:
             cache = get_cache()
             cache.clear_all_caches()
-            
             return jsonify({
                 'status': 'success',
                 'timestamp': datetime.now().isoformat(),
@@ -415,6 +402,40 @@ class APIService:
                 'error': str(e)
             }), 500
     
+    def _update_strategy_version(self):
+        """Update the strategy version."""
+        try:
+            self.logger.info("Received request to update strategy version")
+            data = request.get_json()
+            new_version = data.get('version')
+            config_path = src_path + "/task/math_optimizer/strategy-manager/strategy_version.yaml"
+            if not new_version:
+                return jsonify({
+                    'status': 'error',
+                    'timestamp': datetime.now().isoformat(),
+                    'error': 'Missing version parameter'
+                }), 400
+            # Update the strategy version in the config file
+            with open(config_path, 'r') as f:
+                config = yaml.safe_load(f)
+            config['process-optimization-strategy-config.yaml'] = new_version
+            with open(config_path, 'w') as f:
+                yaml.safe_dump(config, f)
+            self.logger.info(f"Strategy version updated to {new_version}")
+            return jsonify({
+                'status': 'success',
+                'timestamp': datetime.now().isoformat(),
+                'message': f'Strategy version updated to {new_version}'
+            })
+
+        except Exception as e:
+            self.logger.error(f"Strategy version update error: {str(e)}")
+            return jsonify({
+                'status': 'error',
+                'timestamp': datetime.now().isoformat(),
+                'error': str(e)
+            }), 500
+
     def _not_found(self, error):
         """Handle 404 errors."""
         return jsonify({

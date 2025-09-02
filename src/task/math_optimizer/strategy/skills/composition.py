@@ -1,6 +1,6 @@
 from .base import Skill
 from .models import InferenceModel
-import logging
+import structlog
 import concurrent.futures
 
 class CompositionSkill(Skill):
@@ -11,7 +11,7 @@ class CompositionSkill(Skill):
         super().__init__(name, config)
         self.skill_sequence_names = config['config'].get('skill_sequence', [])
         self.skill_sequence = []  # Will be populated by resolve_skills
-        self.logger = logging.getLogger("process_optimization.composition")
+        self.logger = structlog.get_logger("process_optimization.composition")
         self.max_workers = 4  # Number of parallel workers for inference models
         self.logger.debug(f"CompositionSkill initialized with name: {name}")
 

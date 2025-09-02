@@ -7,9 +7,7 @@ import os
 import pandas as pd
 import sys
 import os
-import logging
-from pathlib import Path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))))
+import structlog
 from storage.minio import get_minio_client
 
 class ANNModel(nn.Module):
@@ -55,7 +53,7 @@ class InferenceModel(Skill):
         
         # Initialize MinIO client and logger with configuration
         self.minio_client = get_minio_client(configuration)
-        self.logger = logging.getLogger("process_optimization.inference_model")
+        self.logger = structlog.get_logger("process_optimization.inference_model")
         
         # Load model and scaler if paths are provided
         self.model = None

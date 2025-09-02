@@ -12,8 +12,8 @@ from storage.in_memory_cache import get_cache
 
 class StrategyManager:
     def __init__(self, configuration: Dict = None, 
-                 timestamp_file: str = 'src/task/math_optimizer/strategy-manager/last_run_timestamp.yaml', 
-                 deployed_config_file: str = 'src/task/math_optimizer/strategy-manager/strategy_version.yaml'):
+                 timestamp_file: str = 'src/task/math_optimizer/strategy_manager/last_run_timestamp.yaml', 
+                 deployed_config_file: str = 'src/task/math_optimizer/strategy_manager/strategy_version.yaml'):
         """Initialize StrategyManager with configuration from config.yaml.
         
         Args:

@@ -1,18 +1,11 @@
 import yaml
 from .data_context import DataContext
-from .skills.base import Skill
 from .skills.models import InferenceModel
 from .skills.functions import MathFunction
 from .skills.constraints import Constraint
 from .skills.composition import CompositionSkill
 from .skills.optimizer import OptimizationSkill
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
-# Import via alias to handle hyphenated directory name
-import importlib
-strategy_manager_module = importlib.import_module('task.math_optimizer.strategy-manager.strategy_manager')
-StrategyManager = strategy_manager_module.StrategyManager
+from task.math_optimizer.strategy_manager.strategy_manager import StrategyManager
 
 class OptimizationStrategy:
     """
@@ -231,6 +224,9 @@ class OptimizationStrategy:
         for task in self.tasks_config:
             task_name = task['name']
             # print(f"Executing task: {task_name}")
+            # If this is the pre-calculation task, mark calculated variables as operative
+            if task_name == "PreCalculateVariables":
+                self._mark_calculated_as_operative(data_context)
             
             for skill_name in task['skill_sequence']:
                 if task_name == "PreCalculateVariables":
@@ -242,10 +238,6 @@ class OptimizationStrategy:
                 if not skill:
                     raise ValueError(f"Skill '{skill_name}' in task '{task_name}' not found.")
                 skill.execute(data_context)
-            
-            # If this is the pre-calculation task, mark calculated variables as operative
-            if task_name == "PreCalculateVariables":
-                self._mark_calculated_as_operative(data_context)
         
         return data_context
 
@@ -267,17 +259,3 @@ class OptimizationStrategy:
                 # print(f"Marked {var_id} as operative with value: {var.dof_value}")
             else:
                 print(f"Warning: {var_id} has None dof_value after pre-calculation")
-        
-        # Mark input variables as informative (read-only, non-optimizable)
-        fixed_input_vars = self.get_fixed_input_variable_ids()
-        for var_id in fixed_input_vars:
-            var = data_context.get_variable(var_id)
-            # Keep the current value fixed - these are now informative (read-only)
-            # print(f"Marked {var_id} as informative (read-only) with value: {var.current_value}")
-        
-        # Other operative variables (not inputs to calculated variables) remain operative
-        all_operative_vars = set(self.get_operative_variable_ids())
-        remaining_operative_vars = all_operative_vars - set(fixed_input_vars)
-        for var_id in remaining_operative_vars:
-            var = data_context.get_variable(var_id)
-            # print(f"{var_id} remains operative with value: {var.current_value}")
