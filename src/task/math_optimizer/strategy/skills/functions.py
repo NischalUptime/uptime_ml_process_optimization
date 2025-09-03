@@ -9,7 +9,21 @@ class MathFunction(Skill):
         self.df_formula = config['config']['dataframe_formula'] if 'dataframe_formula' in config['config'] else None
         self.aeval = asteval.Interpreter()
 
-    def resolve_dataframe_formula(self, skill, data_context):
+    def resolve_dataframe_formula(self, data_context):
+        """
+        Resolves a dataframe formula and adds the calculated variable(s) to the context.
+
+        Parameters
+        ----------
+        data_context : object
+            The context object holding the dataframe (with get_dataframe / set_dataframe methods).
+
+        Notes
+        -----
+        - `self.inputs` is expected to be a list of input column names (raw variables of calculated variables).
+        - `self.outputs` is expected to be a list with the output column name(s) (calculated variables).
+        - `self.df_formula` should define the method to apply and its parameters.
+        """
         df = data_context.get_dataframe()
         method = self.df_formula.get('method')
         axis = self.df_formula.get("axis")

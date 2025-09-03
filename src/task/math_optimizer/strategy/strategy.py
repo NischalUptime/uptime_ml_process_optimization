@@ -235,7 +235,7 @@ class OptimizationStrategy:
                     if config and config['class'] == 'MathFunction':
                         math_function = MathFunction(skill_name, config)
                         # Resolving dataframe formula to get calculated variables column in context (As we got data for raw variables of calculated variables in the context)
-                        math_function.resolve_dataframe_formula(skill_name, data_context)
+                        math_function.resolve_dataframe_formula(data_context)
                 skill = self._skills.get(skill_name)
                 if not skill:
                     raise ValueError(f"Skill '{skill_name}' in task '{task_name}' not found.")
