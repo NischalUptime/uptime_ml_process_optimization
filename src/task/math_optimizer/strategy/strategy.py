@@ -4,8 +4,8 @@ from .skills.models import InferenceModel
 from .skills.functions import MathFunction
 from .skills.composition import CompositionSkill
 from .skills.optimizer import OptimizationSkill
-from .skills.constraints import ConstraintsBuilderSkill
-from .skills.bounds import BoundsBuilderSkill
+from .skills.constraints import Constraints
+from .skills.bounds import Bounds
 from task.math_optimizer.strategy_manager.strategy_manager import StrategyManager
 
 class OptimizationStrategy:
@@ -17,8 +17,8 @@ class OptimizationStrategy:
         'MathFunction': MathFunction,
         'CompositionSkill': CompositionSkill,
         'OptimizationSkill': OptimizationSkill,
-        'ConstraintsBuilderSkill': ConstraintsBuilderSkill,
-        'BoundsBuilderSkill': BoundsBuilderSkill,
+        'Constraints': Constraints,
+        'Bounds': Bounds,
     }
 
     def __init__(self, config_path=None, use_minio=True, configuration=None):
@@ -61,7 +61,7 @@ class OptimizationStrategy:
             if isinstance(skills[name], OptimizationSkill):
                 skills[name].set_strategy(self)
 
-            if isinstance(skills[name], ConstraintsBuilderSkill):
+            if isinstance(skills[name], Constraints):
                 skills[name].set_strategy(self)
         
         # Second pass: resolve CompositionSkill dependencies

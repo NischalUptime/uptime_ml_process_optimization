@@ -1,7 +1,7 @@
 from .base import Skill
 
 
-class BoundsBuilderSkill(Skill):
+class Bounds(Skill):
     """
     Builds dynamic bounds and stores them in the DataContext.
     Always uses 'window' behavior: for each input variable, sets
