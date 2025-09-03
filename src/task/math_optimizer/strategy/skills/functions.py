@@ -36,8 +36,11 @@ class MathFunction(Skill):
                 self.aeval.symtable[f"{var_id}_threshold"] = variable.threshold
             # Also make the base variable name available (for backward compatibility)
             self.aeval.symtable[var_id] = dof_value
-        
 
+        if hasattr(data_context, 'weights') and data_context.weights:
+            for weight_name, weight_value in data_context.weights.items():
+                # Create individual weight variables instead of using dot notation
+                self.aeval.symtable[weight_name] = weight_value
         
         # Safely evaluate the expression
         try:

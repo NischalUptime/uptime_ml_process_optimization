@@ -2,9 +2,10 @@ import yaml
 from .data_context import DataContext
 from .skills.models import InferenceModel
 from .skills.functions import MathFunction
-from .skills.constraints import Constraint
 from .skills.composition import CompositionSkill
 from .skills.optimizer import OptimizationSkill
+from .skills.constraints import ConstraintsBuilderSkill
+from .skills.bounds import BoundsBuilderSkill
 from task.math_optimizer.strategy_manager.strategy_manager import StrategyManager
 
 class OptimizationStrategy:
@@ -14,9 +15,10 @@ class OptimizationStrategy:
     SKILL_CLASS_MAP = {
         'InferenceModel': InferenceModel,
         'MathFunction': MathFunction,
-        'Constraint': Constraint,
         'CompositionSkill': CompositionSkill,
         'OptimizationSkill': OptimizationSkill,
+        'ConstraintsBuilderSkill': ConstraintsBuilderSkill,
+        'BoundsBuilderSkill': BoundsBuilderSkill,
     }
 
     def __init__(self, config_path=None, use_minio=True, configuration=None):
@@ -34,6 +36,7 @@ class OptimizationStrategy:
                 self.config = yaml.safe_load(f)
         
         self.variables_config = self.config['variables']
+        self.weights_config = self.config.get('weights', {})
         self.skills_config = self.config['skills']
         self.tasks_config = self.config['tasks']
 
@@ -56,6 +59,9 @@ class OptimizationStrategy:
             
             # Set strategy reference for optimizer skills
             if isinstance(skills[name], OptimizationSkill):
+                skills[name].set_strategy(self)
+
+            if isinstance(skills[name], ConstraintsBuilderSkill):
                 skills[name].set_strategy(self)
         
         # Second pass: resolve CompositionSkill dependencies
@@ -111,11 +117,12 @@ class OptimizationStrategy:
         """Returns a list of variables that can be optimized (Calculated variables + operative variables that remain operative)."""
         # After pre-calculation, both calculated variables and operative variables that are not inputs to calculated variables are optimizable
         calculated_ids = self.get_calculated_variable_ids()
-        fixed_input_ids = set(self.get_fixed_input_variable_ids())
+        # fixed_input_ids = set(self.get_fixed_input_variable_ids())
         all_operative_ids = set(self.get_operative_variable_ids())
         
         # Operative variables that are NOT inputs to calculated variables remain operative
-        remaining_operative_ids = all_operative_ids - fixed_input_ids
+        # remaining_operative_ids = all_operative_ids - fixed_input_ids
+        remaining_operative_ids = all_operative_ids
         
         return list(calculated_ids) + list(remaining_operative_ids)
 
@@ -218,7 +225,7 @@ class OptimizationStrategy:
             - OR list of {"timestamp": ..., "data": {...}} dicts (time window)
         """
         # 1. Create and populate the data context for this cycle
-        data_context = DataContext(self.variables_config)
+        data_context = DataContext(self.variables_config, self.weights_config)
         data_context.populate_initial_data(initial_data)
 
         # 2. Execute tasks in the configured sequence

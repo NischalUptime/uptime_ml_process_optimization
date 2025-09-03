@@ -9,6 +9,8 @@ class Variable:
         
         # Handle physical limits with defaults
         self.threshold = config.get('threshold', 0.0)
+        self.min_hard_limit = config.get('min_hard_limit', 0.0)
+        self.max_hard_limit = config.get('max_hard_limit', 1000.0)
 
         # Initialize values
         self.current_value = None  # Set by populate_initial_data
@@ -22,7 +24,9 @@ class Variable:
         return (f"Variable(id={self.var_id}, "
                 f"current={current_str}, "
                 f"dof={dof_str}, "
-                f"rec={rec_str})")
+                f"rec={rec_str}, "
+                f"min_limit={self.min_hard_limit:.2f}, "
+                f"max_limit={self.max_hard_limit:.2f})")
 
     def set_initial_value(self, value):
         """Sets the initial state for the optimization cycle."""
