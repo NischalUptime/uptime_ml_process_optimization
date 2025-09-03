@@ -47,6 +47,7 @@ class OptimizationSkill(Skill):
             cost_iterations.append(round(cost, 2))
             return cost
 
+
         # Get initial values and bounds for optimizable variables
         x0 = []
         bounds = []
@@ -74,10 +75,10 @@ class OptimizationSkill(Skill):
             print(f"Variable {var_id}: current_value={var.current_value}, threshold={threshold}, min_hard_limit={var.min_hard_limit}, max_hard_limit={var.max_hard_limit}")
             
             x0.append(var.current_value)
-            # Bounds must be provided by BoundsBuilderSkill; do not modify here
+            # Bounds must be provided by Bounds; do not modify here
             dyn = dynamic_bounds_map.get(var_id) or {}
             if 'min' not in dyn or 'max' not in dyn:
-                raise RuntimeError(f"Missing dynamic bounds for '{var_id}'. Ensure BoundsBuilderSkill provides bounds for all optimizer inputs.")
+                raise RuntimeError(f"Missing dynamic bounds for '{var_id}'. Ensure Bounds provides bounds for all optimizer inputs.")
             min_bound = float(dyn['min'])
             max_bound = float(dyn['max'])
             

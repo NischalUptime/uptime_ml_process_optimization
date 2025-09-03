@@ -1,395 +1,380 @@
-# ==============================================================================
-# FILE: config.yaml
-# ==============================================================================
-# This file defines the entire optimization strategy, including all variables,
-# computational skills (models, formulas, constraints), and the execution sequence (tasks).
-# Process engineers can modify this file to tune the optimizer without changing the Python code.
-# ------------------------------------------------------------------------------
-variables:
-  # --- Operative Variables (Degrees of Freedom) ---
-  Kiln_Feed_SFF_1_Feed_rate: { type: Operative, units: t/h, threshold: 2 }
-  Kiln_Feed_SFF_2_Feed_rate: { type: Operative, units: t/h, threshold: 2 }
-  Kiln_Coal_PV: { type: Operative, units: t/h, threshold: 0.05 }
-  Calciner_temperature_PV: { type: Operative, units: °C, threshold: 2.5 }
-  PH_Fan_Speed_PV: { type: Operative, units: RPM, threshold: 1 }
-  Kiln_Drive_Speed_PV: { type: Operative, units: m/min, threshold: 0.05 }
-  Under_grate_Average_Pressure: { type: Operative, units: kPa, threshold: 2 }
-  Cooler_Fan_3_Flow: { type: Operative, units: m3/h, threshold: 2000 }
-  Cooler_Fan_4_Flow: { type: Operative, units: m3/h, threshold: 2000 }
-  Cooler_Fan_5_Flow: { type: Operative, units: m3/h, threshold: 2000 }
-  Cooler_Fan_6_Flow: { type: Operative, units: m3/h, threshold: 2000 }
-  Cooler_Fan_7_Flow: { type: Operative, units: m3/h, threshold: 1500 }
-  Cooler_Fan_8_Flow: { type: Operative, units: m3/h, threshold: 1500 }
-  Cooler_Fan_9_Flow: { type: Operative, units: m3/h, threshold: 1500 }
-  Cooler_Fan_A_Flow: { type: Operative, units: m3/h, threshold: 500 }
-  Cooler_Fan_2_Flow: { type: Operative, units: m3/h, threshold: 500 }
-
-  # --- Informative Variables (Live Plant Data) ---
-  Kiln_Inlet_NOX: { type: Informative, units: percent }
-  Kiln_Drive_Current: { type: Informative, units: A }
-  Clinker_temperature: { type: Informative, units: °C }
-  Calciner_outlet_CO: { type: Informative, units: percent }
-  
-  # --- Calculated Variables (Intermediate Steps) ---
-  combined_Feed_rate: { type: Calculated, units: t/h, threshold: 2 }
-  Cooler_Fan_3_4_5_6_Flow: { type: Calculated, units: m3/h , threshold: 2000}
-  Cooler_Fan_7_8_9_Flow: { type: Calculated, units: m3/h , threshold: 1500}
-
-  delta_combined_Feed_rate: { type: Delta, units: t/h }
-  delta_Kiln_Coal_PV: { type: Delta, units: t/h }
-  delta_Kiln_Drive_Speed_PV: { type: Delta, units: m/min }
-  delta_Kiln_Inlet_NOX: { type: Delta, units: percent }
-  delta_Calciner_temperature_PV: { type: Delta, units: °C }
-  delta_PH_Fan_Speed_PV: { type: Delta, units: RPM }
-  delta_Under_grate_Average_Pressure: { type: Delta, units: kPa }
-  delta_Cooler_Fan_2_Flow: { type: Delta, units: m3/h }
-  delta_Cooler_Fan_3_4_5_6_Flow: { type: Delta, units: m3/h }
-  delta_Cooler_Fan_7_8_9_Flow: { type: Delta, units: m3/h }
-  delta_Cooler_Fan_A_Flow: { type: Delta, units: m3/h }
-  delta_Kiln_Drive_Current: { type: Predicted, units: A }
-  delta_Calciner_outlet_CO: { type: Predicted, units: percent }
-  delta_Clinker_temperature: { type: Predicted, units: °C }
-  predicted_Kiln_Drive_Current: { type: Predicted, units: A }
-  predicted_Calciner_outlet_CO: { type: Predicted, units: percent }
-  predicted_Clinker_temperature: { type: Predicted, units: °C }
-
-  # --- Constraint & Penalty Variables ---
-  constraint_Kiln_Drive_Current: { type: Constraint, units: '[0-1]' }
-  constraint_Calciner_outlet_CO: { type: Constraint, units: '[0-1]' }
-  constraint_Clinker_temperature: { type: Constraint, units: '[0-1]' }
-  kpi_total_constraints: { type: CalculatedKPI, units: '-' }
-  penalty_coal_intervention: { type: CalculatedKPI, units: '-' }
-
-  # --- Final Cost Function ---
-  cost_function_total: { type: CalculatedKPI, units: '-' }
-
+constraint_limits:
+  Burning_zone_temperature:
+    op_max: 1000.0
+    op_min: 0.0
+    var_max: 1000.0
+    var_min: 0.0
+display_variables:
+- Secondary_Air_Temperature
+- Calciner_temperature_PV
+- PH_Fan_Speed_PV
+- combined_Feed_rate
+- Kiln_Coal_PV
+input_values:
+  Burning_zone_temperature: 0.0
+  Calciner_temperature_PV: 900.0
+  Cooler_Fan_3_Flow: 50000.0
+  Cooler_Fan_4_Flow: 58000.0
+  Cooler_Fan_5_Flow: 38000.0
+  Cooler_Fan_6_Flow: 43000.0
+  Cooler_Fan_7_Flow: 37000.0
+  Cooler_Fan_8_Flow: 47000.0
+  Cooler_Fan_9_Flow: 62000.0
+  Kiln_Coal_PV: 6.56
+  Kiln_Feed_SFF_1_Feed_rate: 245.0
+  Kiln_Feed_SFF_2_Feed_rate: 0.0
+  PH_Fan_Speed_PV: 700.0
+  Secondary_Air_Temperature: 0.0
 skills:
-  # --- Pre-calculation Skills ---
-  mf_sum_cooler_flows:
-    class: MathFunction
-    inputs: [Cooler_Fan_3_Flow, Cooler_Fan_4_Flow, Cooler_Fan_5_Flow, Cooler_Fan_6_Flow]
-    outputs: [Cooler_Fan_3_4_5_6_Flow]
-    config:
-      formula: "Cooler_Fan_3_Flow + Cooler_Fan_4_Flow + Cooler_Fan_5_Flow + Cooler_Fan_6_Flow"
-      dataframe_formula:
-        method: sum
-        axis: 1
-
-  mf_sum_cooler_flows_2:
-    class: MathFunction
-    inputs: [Cooler_Fan_7_Flow, Cooler_Fan_8_Flow, Cooler_Fan_9_Flow]
-    outputs: [Cooler_Fan_7_8_9_Flow]
-    config:
-      formula: "Cooler_Fan_7_Flow + Cooler_Fan_8_Flow + Cooler_Fan_9_Flow"
-      dataframe_formula:
-        method: sum
-        axis: 1
-
-  mf_calc_combined_feed_rate:
-    class: MathFunction
-    inputs: [Kiln_Feed_SFF_1_Feed_rate, Kiln_Feed_SFF_2_Feed_rate]
-    outputs: [combined_Feed_rate]
-    config:
-      formula: "Kiln_Feed_SFF_1_Feed_rate + Kiln_Feed_SFF_2_Feed_rate"
-      dataframe_formula:
-        method: sum
-        axis: 1
-
-  # --- Delta Calculation Skills (Inputs for Models) ---
-  mf_calc_delta_feed:
-    class: MathFunction
-    inputs: [combined_Feed_rate]
-    outputs: [delta_combined_Feed_rate]
-    config:
-      formula: "combined_Feed_rate_dof - combined_Feed_rate_current"
-  mf_calc_delta_coal:
-    class: MathFunction
-    inputs: [Kiln_Coal_PV]
-    outputs: [delta_Kiln_Coal_PV]
-    config:
-      formula: "Kiln_Coal_PV_dof - Kiln_Coal_PV_current"
-
-  mf_calc_delta_Kiln_Drive_Speed_PV:
-    class: MathFunction
-    inputs: [Kiln_Drive_Speed_PV]
-    outputs: [delta_Kiln_Drive_Speed_PV]
-    config:
-      formula: "Kiln_Drive_Speed_PV_dof - Kiln_Drive_Speed_PV_current"
-
-  mf_calc_delta_Kiln_Inlet_NOX:
-    class: MathFunction
-    inputs: [Kiln_Inlet_NOX]
-    outputs: [delta_Kiln_Inlet_NOX]
-    config:
-      formula: "0"  # Informative variable - optimizer cannot change it
-
-  mf_calc_delta_Kiln_Drive_Current:
-    class: MathFunction
-    inputs: [Kiln_Drive_Current]
-    outputs: [delta_Kiln_Drive_Current]
-    config:
-      formula: "0"  # Informative variable - optimizer cannot change it
-
-  mf_calc_delta_Clinker_temperature:
-    class: MathFunction
-    inputs: [Clinker_temperature]
-    outputs: [delta_Clinker_temperature]
-    config:
-      formula: "0"  # Informative variable - optimizer cannot change it
-
-  mf_calc_delta_Calciner_outlet_CO:
-    class: MathFunction
-    inputs: [Calciner_outlet_CO]
-    outputs: [delta_Calciner_outlet_CO]
-    config:
-      formula: "0"  # Informative variable - optimizer cannot change it
-
-  mf_calc_delta_Calciner_temperature_PV:
-    class: MathFunction
-    inputs: [Calciner_temperature_PV]
-    outputs: [delta_Calciner_temperature_PV]
-    config:
-      formula: "Calciner_temperature_PV_dof - Calciner_temperature_PV_current"
-
-  mf_calc_delta_PH_Fan_Speed_PV:
-    class: MathFunction
-    inputs: [PH_Fan_Speed_PV]
-    outputs: [delta_PH_Fan_Speed_PV]
-    config:
-      formula: "PH_Fan_Speed_PV_dof - PH_Fan_Speed_PV_current"
-
-  mf_calc_delta_Under_grate_Average_Pressure:
-    class: MathFunction
-    inputs: [Under_grate_Average_Pressure]
-    outputs: [delta_Under_grate_Average_Pressure]
-    config:
-      formula: "Under_grate_Average_Pressure_dof - Under_grate_Average_Pressure_current"
-
-  mf_calc_delta_Cooler_Fan_2_Flow:
-    class: MathFunction
-    inputs: [Cooler_Fan_2_Flow]
-    outputs: [delta_Cooler_Fan_2_Flow]
-    config:
-      formula: "Cooler_Fan_2_Flow_dof - Cooler_Fan_2_Flow_current"
-
-  mf_calc_delta_Cooler_Fan_3_4_5_6_Flow:
-    class: MathFunction
-    inputs: [Cooler_Fan_3_4_5_6_Flow]
-    outputs: [delta_Cooler_Fan_3_4_5_6_Flow]
-    config:
-      formula: "Cooler_Fan_3_4_5_6_Flow_dof - Cooler_Fan_3_4_5_6_Flow_current"
-
-  mf_calc_delta_Cooler_Fan_7_8_9_Flow:
-    class: MathFunction
-    inputs: [Cooler_Fan_7_8_9_Flow]
-    outputs: [delta_Cooler_Fan_7_8_9_Flow]
-    config:
-      formula: "Cooler_Fan_7_8_9_Flow_dof - Cooler_Fan_7_8_9_Flow_current"
-
-  mf_calc_delta_Cooler_Fan_A_Flow:
-    class: MathFunction
-    inputs: [Cooler_Fan_A_Flow]
-    outputs: [delta_Cooler_Fan_A_Flow]
-    config:
-      formula: "Cooler_Fan_A_Flow_dof - Cooler_Fan_A_Flow_current"
-
-  # --- Inference Models (Delta-based) ---
-  im_predict_delta_Kiln_Drive_Current:
-    class: InferenceModel
-    inputs: [combined_Feed_rate, Clinker_temperature, Calciner_temperature_PV, delta_Kiln_Inlet_NOX, delta_Kiln_Drive_Speed_PV]
-    outputs: [delta_Kiln_Drive_Current]
-    config:
-      model_type: ANN
-      model_path: "saved_models/MA_MinMax_lag0_Kiln_Drive_Current_ann_model_fold_5.pth"
-      scaler_path: "saved_scalers/Kiln_Drive_Current_minmax_scalers.pkl"
-      metadata_path: "saved_metadata/Kiln_Drive_Current_metadata.json"
-      feature_engineering:
-        lag_offset:
-          combined_Feed_rate: 
-            lag: 20
-            offset: 40
-            variation: Absolute
-          Calciner_temperature_PV:
-            lag: 10
-            offset: 20
-            variation: Increment
-          Clinker_temperature:
-            lag: 5
-            offset: 10
-            variation: Absolute
-        smoothing: 
-          method: mean #emw, min, max
-          alpha: 0.1
-
-  im_predict_Calciner_outlet_CO:
-    class: InferenceModel
-    inputs: [combined_Feed_rate, Clinker_temperature, Calciner_temperature_PV, delta_PH_Fan_Speed_PV]
-    outputs: [delta_Calciner_outlet_CO]
-    config:
-      model_type: ANN
-      model_path: "saved_models/4_Calciner_outlet_CO_ann_model_fold_2.pth"
-      scaler_path: "saved_scalers/Calciner_outlet_CO_robust_scalers.pkl"
-      metadata_path: "saved_metadata/Calciner_outlet_CO_metadata.json"
-      feature_engineering:
-        lag_offset:
-          combined_Feed_rate: 
-            lag: 10
-            offset: 60
-            variation: Absolute
-          Calciner_temperature_PV:
-            lag: 23
-            offset: 20
-            variation: Increment
-          Clinker_temperature:
-            lag: 5
-            offset: 10
-            variation: Absolute
-        smoothing:
-          method: ewm #ewm, min, max
-          alpha: 0.1
-
-  im_predict_Clinker_temperature:
-    class: InferenceModel
-    inputs: [delta_Kiln_Drive_Current, delta_Under_grate_Average_Pressure, delta_Cooler_Fan_2_Flow, delta_Cooler_Fan_3_4_5_6_Flow, delta_Cooler_Fan_7_8_9_Flow, delta_Cooler_Fan_A_Flow]
-    outputs: [delta_Clinker_temperature]
-    config:
-      model_type: ANN
-      model_path: "saved_models/2_Clinker_temperature_ann_model_fold_2.pth"
-      scaler_path: "saved_scalers/Clinker_temperature_minmax_scalers.pkl"
-      
-
-  # --- Absolute Prediction Skills (Adding deltas back) ---
-  mf_calc_predicted_Kiln_Drive_Current:
-    class: MathFunction
-    inputs: [Kiln_Drive_Current, delta_Kiln_Drive_Current]
-    outputs: [predicted_Kiln_Drive_Current]
-    config:
-      formula: "Kiln_Drive_Current_current + delta_Kiln_Drive_Current_dof"
-
-  mf_calc_predicted_Calciner_outlet_CO:
-    class: MathFunction
-    inputs: [Calciner_outlet_CO, delta_Calciner_outlet_CO]
-    outputs: [predicted_Calciner_outlet_CO]
-    config:
-      formula: "Calciner_outlet_CO_current + delta_Calciner_outlet_CO_dof"
-
-  mf_calc_predicted_Clinker_temperature:
-    class: MathFunction
-    inputs: [Clinker_temperature, delta_Clinker_temperature]
-    outputs: [predicted_Clinker_temperature]
-    config:
-      formula: "Clinker_temperature_current + delta_Clinker_temperature_dof"
-
-  # --- Constraint Skills ---
-  cs_Kiln_Drive_Current_limit:
-    class: Constraint
-    inputs: [predicted_Kiln_Drive_Current]
-    outputs: [constraint_Kiln_Drive_Current]
-    config:
-      var_min: 250
-      var_max: 700
-      op_min: 450
-      op_max: 600
-
-  cs_Calciner_outlet_CO_limit:
-    class: Constraint
-    inputs: [predicted_Calciner_outlet_CO]
-    outputs: [constraint_Calciner_outlet_CO]
-    config:
-      var_min: 0
-      var_max: 1
-      op_min: 0
-      op_max: 0.4
-
-  cs_Clinker_temperature_limit:
-    class: Constraint
-    inputs: [predicted_Clinker_temperature]
-    outputs: [constraint_Clinker_temperature]
-    config:
-      var_min: 30
-      var_max: 225
-      op_min: 40
-      op_max: 150
-
-  # --- KPI and Cost Function Skills ---
-  mf_total_constraints:
-    class: MathFunction
-    inputs: [constraint_Kiln_Drive_Current, constraint_Calciner_outlet_CO, constraint_Clinker_temperature]
-    outputs: [kpi_total_constraints]
-    config:
-      formula: "(0.5 * constraint_Kiln_Drive_Current_dof) + (0.25 * constraint_Calciner_outlet_CO_dof) + (0.25 * constraint_Clinker_temperature_dof)"
-
-  # --- Intervention Logic Skill ---
-  mf_intervention_penalty_coal:
-    class: MathFunction
-    inputs: [delta_combined_Feed_rate, delta_Kiln_Coal_PV]
-    outputs: [penalty_coal_intervention]
-    config:
-      formula: "(delta_combined_Feed_rate_dof > 0 and delta_Kiln_Coal_PV_dof < 0)  * 500"
-
-  # --- Final Cost Function ---
-  mf_cost_function:
-    class: MathFunction
-    inputs: [combined_Feed_rate, Kiln_Coal_PV, kpi_total_constraints, penalty_coal_intervention, delta_combined_Feed_rate, delta_Kiln_Coal_PV]
-    outputs: [cost_function_total]
-    config:
-      # Objective: Minimize coal, maximize feed, maximize constraints, minimize intervention penalty
-      formula: "(1.0 * delta_Kiln_Coal_PV_dof / Kiln_Coal_PV_threshold) + (-1.0 * delta_combined_Feed_rate_dof / combined_Feed_rate_threshold ) - (100.0 * kpi_total_constraints_dof) "
-
-  # --- Composition Skill for the Optimizer ---
-  # This groups all calculations needed to get from informative inputs + calculated variables to the final cost
   cs_kpi_calculation_flow:
     class: CompositionSkill
-    inputs: [combined_Feed_rate, Kiln_Coal_PV, Calciner_temperature_PV, PH_Fan_Speed_PV, Kiln_Drive_Speed_PV, Under_grate_Average_Pressure, Cooler_Fan_2_Flow, Cooler_Fan_A_Flow, Cooler_Fan_4_5_6_Flow, Cooler_Fan_3_4_5_6_Flow, Cooler_Fan_7_8_9_Flow, Kiln_Inlet_NOX, Kiln_Drive_Current, Calciner_outlet_CO, Clinker_temperature]
-    outputs: [cost_function_total]
     config:
       skill_sequence:
-        # Note: Original operative variables that are inputs to calculated variables are now informative (read-only)
-        # Calculated variables (combined_Feed_rate, Cooler_Fan_*_Flow) are optimizable
-        - mf_calc_delta_feed
-        - mf_calc_delta_coal
-        - mf_calc_delta_Kiln_Drive_Speed_PV
-        - mf_calc_delta_Kiln_Inlet_NOX
-        - mf_calc_delta_Calciner_temperature_PV
-        - mf_calc_delta_PH_Fan_Speed_PV
-        - mf_calc_delta_Under_grate_Average_Pressure
-        - mf_calc_delta_Cooler_Fan_2_Flow
-        - mf_calc_delta_Cooler_Fan_3_4_5_6_Flow
-        - mf_calc_delta_Cooler_Fan_7_8_9_Flow
-        - mf_calc_delta_Cooler_Fan_A_Flow
-        - mf_calc_delta_Kiln_Drive_Current
-        - mf_calc_delta_Clinker_temperature
-        - mf_calc_delta_Calciner_outlet_CO
-        - im_predict_delta_Kiln_Drive_Current
-        - im_predict_Calciner_outlet_CO
-        - im_predict_Clinker_temperature
-        - mf_calc_predicted_Kiln_Drive_Current
-        - mf_calc_predicted_Calciner_outlet_CO
-        - mf_calc_predicted_Clinker_temperature
-        - cs_Kiln_Drive_Current_limit
-        - cs_Calciner_outlet_CO_limit
-        - cs_Clinker_temperature_limit
-        - mf_total_constraints
-        - mf_intervention_penalty_coal
-        - mf_cost_function
-
-  # --- Core Optimization Skill ---
+      - mf_calc_delta_Secondary_Air_Temperature
+      - mf_calc_delta_Calciner_temperature_PV
+      - mf_calc_delta_PH_Fan_Speed_PV
+      - mf_calc_delta_combined_Feed_rate
+      - mf_calc_delta_Kiln_Coal_PV
+      - im_predict_delta_Burning_zone_temperature
+      - mf_calc_predicted_Burning_zone_temperature
+      - mf_intervention_penalty_coal
+      - mf_cost_function
+    inputs:
+    - PH_Fan_Speed_PV
+    - combined_Feed_rate
+    - Kiln_Coal_PV
+    - Secondary_Air_Temperature
+    - Calciner_temperature_PV
+    outputs:
+    - cost_function_total
+  im_predict_delta_Burning_zone_temperature:
+    class: InferenceModel
+    config:
+      feature_engineering:
+        feature_engineering_timestamp: '2025-09-02 07:46:01.791408'
+        lag_method: custom
+        lag_offset:
+          Calciner_temperature_PV:
+            lag: 9
+            offset: 29
+            variation: Absolute
+          Kiln_Coal_PV:
+            lag: 26
+            offset: 59
+            variation: Increment
+          PH_Fan_Speed_PV:
+            lag: 1
+            offset: 5
+            variation: Absolute
+          Secondary_Air_Temperature:
+            lag: 1
+            offset: 25
+            variation: Increment
+          combined_Feed_rate:
+            lag: 25
+            offset: 38
+            variation: Increment
+        smoothing:
+          alpha: null
+          method: mean
+      metadata_path: models/Burning_zone_temperature_MODEL_INFO_mean_MinMax/Burning_zone_temperature_metadata.json
+      model_path: models/Burning_zone_temperature_MODEL_INFO_mean_MinMax/Burning_zone_temperature_model.pth
+      model_type: ANN
+      scaler_path: models/Burning_zone_temperature_MODEL_INFO_mean_MinMax/Burning_zone_temperature_scalers.pkl
+    inputs:
+    - delta_combined_Feed_rate
+    - delta_Kiln_Coal_PV
+    - Calciner_temperature_PV
+    - delta_Secondary_Air_Temperature
+    - PH_Fan_Speed_PV
+    outputs:
+    - delta_Burning_zone_temperature
+  mf_calc_delta_Calciner_temperature_PV:
+    class: MathFunction
+    config:
+      formula: Calciner_temperature_PV_dof
+    inputs:
+    - Calciner_temperature_PV
+    outputs:
+    - delta_Calciner_temperature_PV
+  mf_calc_delta_Kiln_Coal_PV:
+    class: MathFunction
+    config:
+      formula: Kiln_Coal_PV_dof - Kiln_Coal_PV_current
+    inputs:
+    - Kiln_Coal_PV
+    outputs:
+    - delta_Kiln_Coal_PV
+  mf_calc_delta_PH_Fan_Speed_PV:
+    class: MathFunction
+    config:
+      formula: PH_Fan_Speed_PV_dof
+    inputs:
+    - PH_Fan_Speed_PV
+    outputs:
+    - delta_PH_Fan_Speed_PV
+  mf_calc_delta_Secondary_Air_Temperature:
+    class: MathFunction
+    config:
+      formula: Secondary_Air_Temperature_dof - Secondary_Air_Temperature_current
+    inputs:
+    - Secondary_Air_Temperature
+    outputs:
+    - delta_Secondary_Air_Temperature
+  mf_calc_delta_combined_Feed_rate:
+    class: MathFunction
+    config:
+      formula: combined_Feed_rate_dof - combined_Feed_rate_current
+    inputs:
+    - combined_Feed_rate
+    outputs:
+    - delta_combined_Feed_rate
+  mf_calc_predicted_Burning_zone_temperature:
+    class: MathFunction
+    config:
+      formula: Burning_zone_temperature_current + delta_Burning_zone_temperature_dof
+    inputs:
+    - Burning_zone_temperature
+    - delta_Burning_zone_temperature
+    outputs:
+    - predicted_Burning_zone_temperature
+  mf_cost_function:
+    class: MathFunction
+    config:
+      formula: ((cost_coal_weight * delta_Kiln_Coal_PV_dof / Kiln_Coal_PV_threshold)
+        + (cost_feed_rate_weight * delta_combined_Feed_rate_dof / combined_Feed_rate_threshold)
+        + penalty_coal_intervention_dof)
+    inputs:
+    - penalty_coal_intervention
+    - delta_Kiln_Coal_PV
+    - delta_combined_Feed_rate
+    - Kiln_Coal_PV
+    - combined_Feed_rate
+    outputs:
+    - cost_function_total
+  mf_intervention_penalty_coal:
+    class: MathFunction
+    config:
+      formula: penalty_weight * max(0, (delta_combined_Feed_rate_dof / combined_Feed_rate_threshold))
+        * max(0, -(delta_Kiln_Coal_PV_dof / Kiln_Coal_PV_threshold))
+    inputs:
+    - delta_combined_Feed_rate
+    - delta_Kiln_Coal_PV
+    - combined_Feed_rate
+    - Kiln_Coal_PV
+    outputs:
+    - penalty_coal_intervention
+  mf_sum_combined_feed_rate:
+    class: MathFunction
+    config:
+      dataframe_formula:
+        axis: 1
+        method: sum
+      formula: Kiln_Feed_SFF_1_Feed_rate + Kiln_Feed_SFF_2_Feed_rate
+    inputs:
+    - Kiln_Feed_SFF_1_Feed_rate
+    - Kiln_Feed_SFF_2_Feed_rate
+    outputs:
+    - combined_Feed_rate
+  mf_sum_cooler_flows:
+    class: MathFunction
+    config:
+      dataframe_formula:
+        axis: 1
+        method: sum
+      formula: Cooler_Fan_3_Flow + Cooler_Fan_4_Flow + Cooler_Fan_5_Flow + Cooler_Fan_6_Flow
+    inputs:
+    - Cooler_Fan_3_Flow
+    - Cooler_Fan_4_Flow
+    - Cooler_Fan_5_Flow
+    - Cooler_Fan_6_Flow
+    outputs:
+    - Cooler_Fan_3_4_5_6_Flow
+  mf_sum_cooler_flows_2:
+    class: MathFunction
+    config:
+      dataframe_formula:
+        axis: 1
+        method: sum
+      formula: Cooler_Fan_7_Flow + Cooler_Fan_8_Flow + Cooler_Fan_9_Flow
+    inputs:
+    - Cooler_Fan_7_Flow
+    - Cooler_Fan_8_Flow
+    - Cooler_Fan_9_Flow
+    outputs:
+    - Cooler_Fan_7_8_9_Flow
+  mf_sum_cooler_flows_3:
+    class: MathFunction
+    config:
+      dataframe_formula:
+        axis: 1
+        method: sum
+      formula: Cooler_Fan_4_Flow + Cooler_Fan_5_Flow + Cooler_Fan_6_Flow
+    inputs:
+    - Cooler_Fan_4_Flow
+    - Cooler_Fan_5_Flow
+    - Cooler_Fan_6_Flow
+    outputs:
+    - Cooler_Fan_4_5_6_Flow
+  os_build_bounds:
+    class: Bounds
+    config: {}
+    inputs: &id001
+    - Secondary_Air_Temperature
+    - combined_Feed_rate
+    - PH_Fan_Speed_PV
+    - Kiln_Coal_PV
+    outputs: *id001
+  os_build_constraints:
+    class: Constraints
+    config:
+      template:
+      - op_max: 1000.0
+        op_min: 0.0
+        predicted_var: predicted_Burning_zone_temperature
   os_main_optimizer:
     class: OptimizationSkill
-    inputs: [Kiln_Coal_PV, Calciner_temperature_PV, PH_Fan_Speed_PV, Kiln_Drive_Speed_PV, Under_grate_Average_Pressure, Cooler_Fan_2_Flow, Cooler_Fan_A_Flow, combined_Feed_rate, Cooler_Fan_3_4_5_6_Flow, Cooler_Fan_7_8_9_Flow] # Calculated variables + operative variables that remain operative
-    outputs: [Kiln_Coal_PV, Calciner_temperature_PV, PH_Fan_Speed_PV, Kiln_Drive_Speed_PV, Under_grate_Average_Pressure, Cooler_Fan_2_Flow, Cooler_Fan_A_Flow, combined_Feed_rate, Cooler_Fan_3_4_5_6_Flow, Cooler_Fan_7_8_9_Flow] # Calculated variables + operative variables that remain operative
     config:
-      cost_skill_name: "cs_kpi_calculation_flow"
-      cost_feature_name: "cost_function_total"
-      algorithm: "SLSQP" # A good choice for constrained optimization
-
+      algorithm: SLSQP
+      cost_feature_name: cost_function_total
+      cost_skill_name: cs_kpi_calculation_flow
+    inputs: *id001
+    outputs: *id001
 tasks:
-  - name: PreCalculateVariables
-    skill_sequence:
-      - mf_sum_cooler_flows
-      - mf_sum_cooler_flows_2
-      - mf_calc_combined_feed_rate
-      
-  - name: CalculateRecommendations
-    skill_sequence:
-      - os_main_optimizer
+- name: PreCalculateVariables
+  skill_sequence:
+  - mf_sum_cooler_flows
+  - mf_sum_cooler_flows_2
+  - mf_sum_cooler_flows_3
+  - mf_sum_combined_feed_rate
+- name: CalculateRecommendations
+  skill_sequence:
+  - os_build_bounds
+  - os_build_constraints
+  - os_main_optimizer
+variables:
+  Burning_zone_temperature:
+    threshold: 1.0
+    type: Informative
+    units: ''
+  Calciner_temperature_PV:
+    type: Informative
+    units: "\xB0C"
+  Cooler_Fan_3_4_5_6_Flow:
+    max_hard_limit: 300000.0
+    min_hard_limit: 100000.0
+    threshold: 2000.0
+    type: Calculated
+    units: m3/h
+  Cooler_Fan_3_Flow:
+    threshold: 2000.0
+    type: Informative
+    units: m3/h
+  Cooler_Fan_4_5_6_Flow:
+    max_hard_limit: 200000.0
+    min_hard_limit: 100000.0
+    threshold: 2000.0
+    type: Calculated
+    units: m3/h
+  Cooler_Fan_4_Flow:
+    threshold: 2000.0
+    type: Informative
+    units: m3/h
+  Cooler_Fan_5_Flow:
+    threshold: 2000.0
+    type: Informative
+    units: m3/h
+  Cooler_Fan_6_Flow:
+    threshold: 2000.0
+    type: Informative
+    units: m3/h
+  Cooler_Fan_7_8_9_Flow:
+    max_hard_limit: 200000.0
+    min_hard_limit: 25000.0
+    threshold: 1500.0
+    type: Calculated
+    units: m3/h
+  Cooler_Fan_7_Flow:
+    threshold: 1500.0
+    type: Informative
+    units: m3/h
+  Cooler_Fan_8_Flow:
+    threshold: 1500.0
+    type: Informative
+    units: m3/h
+  Cooler_Fan_9_Flow:
+    threshold: 1500.0
+    type: Informative
+    units: m3/h
+  Kiln_Coal_PV:
+    max_hard_limit: 16.0
+    min_hard_limit: 8.0
+    threshold: 0.05
+    type: Operative
+    units: t/h
+  Kiln_Feed_SFF_1_Feed_rate:
+    threshold: 5.0
+    type: Informative
+    units: t/h
+  Kiln_Feed_SFF_2_Feed_rate:
+    threshold: 1.0
+    type: Informative
+    units: t/h
+  PH_Fan_Speed_PV:
+    max_hard_limit: 1400.0
+    min_hard_limit: 500.0
+    threshold: 1.0
+    type: Operative
+    units: RPM
+  Secondary_Air_Temperature:
+    max_hard_limit: 1000.0
+    min_hard_limit: 0.0
+    threshold: 1.0
+    type: Operative
+    units: ''
+  combined_Feed_rate:
+    max_hard_limit: 400.0
+    min_hard_limit: 100.0
+    threshold: 2.0
+    type: Calculated
+    units: t/h
+  cost_function_total:
+    type: CalculatedKPI
+    units: '-'
+  delta_Burning_zone_temperature:
+    type: Delta
+    units: ''
+  delta_Calciner_temperature_PV:
+    type: Delta
+    units: "\xB0C"
+  delta_Cooler_Fan_3_4_5_6_Flow:
+    type: Delta
+    units: m3/h
+  delta_Cooler_Fan_4_5_6_Flow:
+    type: Delta
+    units: m3/h
+  delta_Cooler_Fan_7_8_9_Flow:
+    type: Delta
+    units: m3/h
+  delta_Kiln_Coal_PV:
+    type: Delta
+    units: t/h
+  delta_PH_Fan_Speed_PV:
+    type: Delta
+    units: RPM
+  delta_Secondary_Air_Temperature:
+    type: Delta
+    units: ''
+  delta_combined_Feed_rate:
+    type: Delta
+    units: t/h
+  penalty_coal_intervention:
+    type: CalculatedKPI
+    units: '-'
+  predicted_Burning_zone_temperature:
+    type: Predicted
+    units: ''
+weights:
+  cost_coal_weight: 1.0
+  cost_feed_rate_weight: -1.0
+  penalty_weight: 100.0

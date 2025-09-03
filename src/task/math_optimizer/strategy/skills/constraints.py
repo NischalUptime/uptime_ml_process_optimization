@@ -3,7 +3,7 @@ from scipy.optimize import NonlinearConstraint as SciPyNonlinearConstraint
 import numpy as np
 
 
-class ConstraintsBuilderSkill(Skill):
+class Constraints(Skill):
     """
     Builds dynamic hard constraints and stores them in the DataContext.
 
@@ -31,7 +31,7 @@ class ConstraintsBuilderSkill(Skill):
         # Validate entries
         for idx, c in enumerate(self.template):
             if 'predicted_var' not in c or 'op_min' not in c or 'op_max' not in c:
-                raise ValueError(f"ConstraintsBuilderSkill: template[{idx}] missing required keys: 'predicted_var', 'op_min', 'op_max'")
+                raise ValueError(f"Constraints: template[{idx}] missing required keys: 'predicted_var', 'op_min', 'op_max'")
 
         # Build solver constraints directly from template
         solver_constraints = []
@@ -46,9 +46,9 @@ class ConstraintsBuilderSkill(Skill):
                 opt_inputs = [var_id for var_id in opt.inputs if var_id in optimizable_inputs]
 
                 def make_constraint_fun(op_min, op_max, pred_var_id):
-                    def fun(x_vals):
+                    def fun(x):
                         # Update context with current x values
-                        for var_id, value in zip(opt_inputs, x_vals):
+                        for var_id, value in zip(opt_inputs, x):
                             data_context.get_variable(var_id).dof_value = value
                         # Run cost skill to produce prediction
                         cost_skill.execute(data_context)
