@@ -10,5 +10,6 @@ psycopg2-binary>=2.9.0
 minio>=7.0.0
 flask>=2.0.0
 flask-cors>=3.0.0
+ray==2.44.1
 structlog>=21.0.0
  
