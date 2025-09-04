@@ -21,6 +21,7 @@ storage:
     access_key: user
     secret_key: password
     bucket: process-optimization
+    
 optimization:
   interval_seconds: 300
   max_iterations: 1000

@@ -7,7 +7,7 @@ import threading
 import time
 import yaml
 import structlog
-import logging
+import ray
 from datetime import datetime
 from typing import Optional
 
@@ -15,6 +15,7 @@ from typing import Optional
 from service.optimization import OptimizationService
 from service.api import APIService
 from core.logging_config import configure_structlog
+from ray_runner import OptimizationActor
 
 
 
@@ -79,6 +80,22 @@ class ProcessOptimizationApp:
             import traceback
             log.error(traceback.format_exc())
     
+    def _run_continuous_optimization_ray(self):
+        # Init Ray (connects to local cluster or external one if available)
+        ray.init(address="auto")  # use "ray://127.0.0.1:10001" if connecting to a cluster
+
+        log = structlog.get_logger()
+        log.info("Starting 3 OptimizationActor instances with Ray...")
+
+        # Start 3 independent actors
+        actors = [OptimizationActor.remote(self.configuration) for _ in range(3)]
+
+        # Kick them off in parallel
+        for actor in actors:
+            actor.start.remote()
+
+        log.info("All optimization services launched in Ray cluster")
+    
     def start(self):
         """Start the application based on the selected mode."""
         log = structlog.get_logger()
@@ -88,7 +105,7 @@ class ProcessOptimizationApp:
         
         try:
             if self.mode in ["continuous", "hybrid"]:
-                # Start continuous optimization in background thread
+                #Start continuous optimization in background thread
                 self.optimization_thread = threading.Thread(
                     target=self._run_continuous_optimization,
                     name="OptimizationThread",
@@ -96,6 +113,8 @@ class ProcessOptimizationApp:
                 )
                 self.optimization_thread.start()
                 log.info("Continuous optimization started in background")
+                #self._run_continuous_optimization_ray()
+
             
             if self.mode in ["api", "hybrid"]:
                 # Start API service (this will block the main thread)
@@ -171,8 +190,6 @@ if __name__ == "__main__":
 
     log.debug("configuration loaded")
     log.debug("logger configured for global consumption")
-    
-
     
     log.info(f"<<{configuration['meta']['id']}>> starting process optimization worker ...")
 

@@ -286,20 +286,10 @@ class APIService:
     
     def _health_check(self):
         """Health check endpoint."""
-        cache = get_cache()
-        cache_stats = cache.get_cache_stats()
         
         return jsonify({
             'status': 'healthy',
-            'timestamp': datetime.now().isoformat(),
-            'cache_stats': {
-                'config_version': cache_stats.get('current_config_version'),
-                'cached_timestamp': cache_stats.get('cached_last_run_timestamp'),
-                'total_cached_items': sum(
-                    stats['active_items'] for stats in cache_stats.values() 
-                    if isinstance(stats, dict) and 'active_items' in stats
-                )
-            }
+            'timestamp': datetime.now().isoformat()
         })
     
     def _run_optimization(self):

@@ -63,43 +63,24 @@ services:
       "
     restart: "no"
 
-  # # Process Optimization Application
-  # process-optimization:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
-  #   container_name: uptime-ml-process-optimization
-  #   ports:
-  #     - "5000:5000"
-  #   environment:
-  #     - PYTHONPATH=/app/src
-  #   volumes:
-  #     - ./config.docker.yaml:/app/config.yaml:ro
-  #     - ./process-optimization-strategy-config.yaml:/app/process-optimization-strategy-config.yaml:ro
-  #     - logs_data:/app/logs
-  #   depends_on:
-
-  #     postgres:
-  #       condition: service_healthy
-  #     minio:
-  #       condition: service_healthy
-  #   networks:
-  #     - process_optimization_network
-  #   healthcheck:
-  #     test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
-  #     interval: 30s
-  #     timeout: 10s
-  #     retries: 3
-  #     start_period: 60s
-  #   restart: unless-stopped
+  # Process Optimization Application
+  process-optimization:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: uptime-ml-process-optimization
+    ports:
+      - "8005:5000"
+    environment:
+      - PYTHONPATH=/app/src
+    networks:
+      - process_optimization_network
+    volumes:
+      - ./config.docker.yaml:/app/config.yaml:ro
 
 volumes:
-  postgres_data:
-    driver: local
   minio_data:
-    driver: local
   logs_data:
-    driver: local
 
 networks:
   process_optimization_network:
