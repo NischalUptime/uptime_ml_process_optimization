@@ -398,7 +398,7 @@ class APIService:
             self.logger.info("Received request to update strategy version")
             data = request.get_json()
             new_version = data.get('version')
-            config_path = src_path + "/task/math_optimizer/strategy-manager/strategy_version.yaml"
+            config_path = "src/task/math_optimizer/strategy_manager/strategy_version.yaml"
             if not new_version:
                 return jsonify({
                     'status': 'error',
