@@ -233,8 +233,6 @@ class OptimizationStrategy:
             task_name = task['name']
             # print(f"Executing task: {task_name}")
             # If this is the pre-calculation task, mark calculated variables as operative
-            if task_name == "PreCalculateVariables":
-                self._mark_calculated_as_operative(data_context)
             
             for skill_name in task['skill_sequence']:
                 if task_name == "PreCalculateVariables":
@@ -247,6 +245,9 @@ class OptimizationStrategy:
                 if not skill:
                     raise ValueError(f"Skill '{skill_name}' in task '{task_name}' not found.")
                 skill.execute(data_context)
+            
+            if task_name == "PreCalculateVariables":
+                self._mark_calculated_as_operative(data_context)
         
         return data_context
 

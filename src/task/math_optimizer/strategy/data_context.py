@@ -59,10 +59,23 @@ class DataContext:
         for var_id, variable in self._variables.items():
             if variable.current_value is None:
                 # Set default values based on variable type
-                if variable.var_type in ['Delta', 'Predicted', 'Constraint', 'CalculatedKPI']:
+                if variable.var_type in ['Delta', 'Constraint', 'CalculatedKPI']:
                     variable.current_value = 0.0
                     variable.dof_value = 0.0
                     variable.recommended_value = 0.0
+                elif variable.var_type == 'Predicted':
+                    # For predicted variables, set initial value from base variable
+                    base_var_id = var_id.replace('predicted_', '')
+                    if self.has_variable(base_var_id):
+                        base_var = self.get_variable(base_var_id)
+                        variable.current_value = base_var.current_value
+                        variable.dof_value = base_var.current_value
+                        variable.recommended_value = base_var.current_value
+                    else:
+                        # Fallback if base variable not found
+                        variable.current_value = 0.0
+                        variable.dof_value = 0.0
+                        variable.recommended_value = 0.0
                 elif variable.var_type == 'Calculated':
                     # For calculated variables, we'll set them after pre-calculation
                     variable.current_value = 0.0
